@@ -1,5 +1,7 @@
 #[cfg(target_os = "windows")]
 extern crate winrt_notification;
+#[cfg(unix)]
+use notify_rust::{Notification, Timeout};
 #[cfg(target_os = "windows")]
 use winrt_notification::{Duration, Sound, Toast};
 
@@ -19,7 +21,16 @@ fn send_notification(prompt: &str, next_toast: &str) {
         .expect("unable to toast");
 }
 
-#[cfg(all(unix, not(target_os = "windows")))]
+#[cfg(unix)]
 fn send_notification(prompt: &str, next_toast: &str) {
-    println!("Hello")
+    Notification::new()
+        .summary(prompt)
+        .body(&format!(
+            "It's time to change your stance.\nNext reminder in: {} min.",
+            next_toast
+        ))
+        .sound_name("dialog-information")
+        .timeout(Timeout::Never)
+        .show()
+        .expect("unable to toast");
 }
