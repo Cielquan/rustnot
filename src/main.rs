@@ -5,8 +5,24 @@ use notify_rust::{Notification, Timeout};
 #[cfg(target_os = "windows")]
 use winrt_notification::{Duration, Sound, Toast};
 
+enum CurrentStance {
+    Standing,
+    Sitting,
+}
+
 fn main() {
-    send_notification("Stand Up!", "10")
+    let mut current_stance = CurrentStance::Sitting;
+
+    match current_stance {
+        CurrentStance::Standing => {
+            send_notification("Sit Down!", "45");
+            current_stance = CurrentStance::Sitting;
+        }
+        CurrentStance::Sitting => {
+            send_notification("Stand Up!", "15");
+            current_stance = CurrentStance::Standing;
+        }
+    }
 }
 
 #[cfg(target_os = "windows")]
