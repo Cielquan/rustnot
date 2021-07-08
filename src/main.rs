@@ -1,8 +1,14 @@
 #[cfg(target_os = "windows")]
 extern crate winrt_notification;
+use anyhow::Result;
 #[cfg(unix)]
 use notify_rust::{Notification, Timeout};
+use serde_derive::Deserialize;
+use std::fs::File;
+use std::io::{Read, Write};
+use std::path::Path;
 use std::{thread, time};
+use toml;
 #[cfg(target_os = "windows")]
 use winrt_notification::{Duration, Sound, Toast};
 
@@ -11,24 +17,79 @@ enum CurrentStance {
     Sitting,
 }
 
+#[derive(Deserialize)]
+struct Config {
+    sit_time: u64,
+    stand_time: u64,
+}
+
+const DEFAULT_CONFIG: Config = Config {
+    sit_time: 45,
+    stand_time: 15,
+};
+
+const DEFAULT_CONFIG_FILE_CONTENT: &str = r#"sit_time = 45
+stand_time = 15
+"#;
+
+const CONFIG_FILE: &str = "config.toml";
+
 fn main() {
     let mut current_stance = CurrentStance::Standing;
+    let config = load_config();
     let mut waiting_time: u64;
 
     loop {
         match current_stance {
             CurrentStance::Standing => {
                 current_stance = CurrentStance::Sitting;
-                waiting_time = 45;
+                waiting_time = config.sit_time;
                 send_notification("Sit Down!", waiting_time);
             }
             CurrentStance::Sitting => {
                 current_stance = CurrentStance::Standing;
-                waiting_time = 15;
+                waiting_time = config.stand_time;
                 send_notification("Stand Up!", waiting_time);
             }
         }
         thread::sleep(time::Duration::from_secs(waiting_time));
+    }
+}
+
+fn load_config() -> Config {
+    let file_content: String;
+    if Path::new(CONFIG_FILE).exists() {
+        file_content = match load_config_from_file() {
+            Ok(config) => config,
+            Err(_) => String::from(DEFAULT_CONFIG_FILE_CONTENT),
+        };
+    } else {
+        file_content = String::from(DEFAULT_CONFIG_FILE_CONTENT);
+        create_new_config_file();
+    }
+    parse_config(&file_content)
+}
+
+fn load_config_from_file() -> Result<String> {
+    let mut s = String::new();
+    File::open(CONFIG_FILE)?.read_to_string(&mut s)?;
+    Ok(s)
+}
+
+fn create_new_config_file() {
+    match File::create(CONFIG_FILE) {
+        Ok(mut file) => match file.write_all(DEFAULT_CONFIG_FILE_CONTENT.as_bytes()) {
+            Ok(_) => return,
+            Err(_) => panic!("Could not write to config file."),
+        },
+        Err(_) => panic!("Could not create config file."),
+    };
+}
+
+fn parse_config(config: &str) -> Config {
+    match toml::from_str(config) {
+        Ok(conf) => conf,
+        Err(_) => DEFAULT_CONFIG,
     }
 }
 

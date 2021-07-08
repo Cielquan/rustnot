@@ -6,6 +6,12 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[dependencies]
+anyhow = "^1.0"
+serde = "^1.0"
+serde_derive = "^1.0"
+toml = "0.5.8"
+
 [target.'cfg(unix)'.dependencies]
 notify-rust = "^4"
 
