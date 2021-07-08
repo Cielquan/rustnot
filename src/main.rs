@@ -52,7 +52,7 @@ fn main() {
                 send_notification("Stand Up!", waiting_time);
             }
         }
-        thread::sleep(time::Duration::from_secs(waiting_time));
+        thread::sleep(time::Duration::from_secs(waiting_time * 60));
     }
 }
 
