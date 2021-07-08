@@ -32,7 +32,7 @@ const DEFAULT_CONFIG_FILE_CONTENT: &str = r#"sit_time = 45
 stand_time = 15
 "#;
 
-const CONFIG_FILE: &str = "config.toml";
+const CONFIG_FILE: &str = "rustnot_config.toml";
 
 fn main() {
     let mut current_stance = CurrentStance::Standing;
