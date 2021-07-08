@@ -9,6 +9,16 @@ Reason for this is I have a desk which can be used while standing or sitting and
 working long hours at my PC I tend to forget to change positions once in a while to
 relax my back.
 
+### Config
+
+Upon start the tool tries to read the durations for sitting and standing from a
+`rustnot_config.toml` file. If this file does not exist it will be created with a
+default config. If the file cannot be read the default config is also loaded.
+
+The default config is:
+- 45 min sitting
+- 15 min standing
+
 ## License
 
 Licensed under either of
