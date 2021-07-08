@@ -33,11 +33,11 @@ fn main() {
 }
 
 #[cfg(target_os = "windows")]
-fn send_notification(prompt: &str, next_toast: u64) {
+fn send_notification(prompt: &str, next_toast_in: u64) {
     Toast::new(Toast::POWERSHELL_APP_ID)
         .title(prompt)
         .text1("It's time to change your stance.")
-        .text2(&format!("Next reminder in: {} min.", next_toast))
+        .text2(&format!("Next reminder in: {} min.", next_toast_in))
         .sound(Some(Sound::Default))
         .duration(Duration::Long)
         .show()
@@ -45,12 +45,12 @@ fn send_notification(prompt: &str, next_toast: u64) {
 }
 
 #[cfg(unix)]
-fn send_notification(prompt: &str, next_toast: &str) {
+fn send_notification(prompt: &str, next_toast_in: &str) {
     Notification::new()
         .summary(prompt)
         .body(&format!(
             "It's time to change your stance.\nNext reminder in: {} min.",
-            next_toast
+            next_toast_in
         ))
         .sound_name("dialog-information")
         .timeout(Timeout::Never)
