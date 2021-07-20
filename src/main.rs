@@ -106,7 +106,7 @@ fn send_notification(prompt: &str, next_toast_in: u64) {
 }
 
 #[cfg(unix)]
-fn send_notification(prompt: &str, next_toast_in: &str) {
+fn send_notification(prompt: &str, next_toast_in: u64) {
     Notification::new()
         .summary(prompt)
         .body(&format!(
