@@ -25,12 +25,12 @@ fn main() {
         match current_stance {
             CurrentStance::Standing => {
                 current_stance = CurrentStance::Sitting;
-                waiting_time = (*config::CONFIG.lock()).settings.sit_time;
+                waiting_time = (*config::CONFIG.lock()).sit_time;
                 notification::send_notification("Sit Down!", waiting_time);
             }
             CurrentStance::Sitting => {
                 current_stance = CurrentStance::Standing;
-                waiting_time = (*config::CONFIG.lock()).settings.stand_time;
+                waiting_time = (*config::CONFIG.lock()).stand_time;
                 notification::send_notification("Stand Up!", waiting_time);
             }
         }

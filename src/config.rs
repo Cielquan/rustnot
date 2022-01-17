@@ -8,16 +8,11 @@ use thiserror::Error;
 /// The configuration object.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Config {
-    pub settings: Settings,
-}
-
-/// The application specific part of the confiuration.
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct Settings {
     pub sit_time: u32,
     pub stand_time: u32,
 }
 
+/// The application spec
 impl Default for Config {
     fn default() -> Self {
         toml::from_str(DEFAULT_CONFIG_TOML_STR).unwrap()
@@ -74,8 +69,8 @@ impl Config {
 
 /// Default configuration of rustnot as TOML string.
 const DEFAULT_CONFIG_TOML_STR: &str = r#"
-settings.sit_time = 45
-settings.stand_time = 15
+sit_time = 45
+stand_time = 15
 "#;
 
 const CONFIG_FILE_PATH: &str = "rustnot_config.toml";
