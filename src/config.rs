@@ -23,6 +23,21 @@ impl Default for Config {
     }
 }
 
+impl Config {
+    pub async fn load_from_file() -> anyhow::Result<Config> {
+        let conf_string = fs::read_to_string(CONFIG_FILE_PATH)?;
+        let conf: Config = toml::from_str(conf_string.as_str())?;
+        Ok(conf)
+    }
+
+    pub async fn save_to_file(&self) -> anyhow::Result<()> {
+        let conf_string = toml::to_string(self)?;
+        let mut file = File::create(CONFIG_FILE_PATH)?;
+        write!(file, "{}", conf_string.as_str())?;
+        Ok(())
+    }
+}
+
 /// Default configuration of rustnot as TOML string.
 const DEFAULT_CONFIG_TOML_STR: &str = r#"
 settings.sit_time = 45
