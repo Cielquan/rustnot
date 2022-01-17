@@ -3,6 +3,7 @@ use std::io::Write;
 use std::path::Path;
 
 use parking_lot::Mutex;
+use thiserror::Error;
 
 /// The configuration object.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -23,18 +24,51 @@ impl Default for Config {
     }
 }
 
+#[derive(Error, Debug, Clone)]
+pub enum ConfigFileError {
+    #[error("Failed to read the config file.")]
+    Read,
+    #[error("Failed to write the config file.")]
+    Write,
+    #[error("Failed to parse the config file.")]
+    ParseFile,
+    #[error("Failed to parse the config state.")]
+    ParseState,
+}
+
 impl Config {
-    pub async fn load_from_file() -> anyhow::Result<Config> {
-        let conf_string = fs::read_to_string(CONFIG_FILE_PATH)?;
-        let conf: Config = toml::from_str(conf_string.as_str())?;
-        Ok(conf)
+    pub async fn load_from_file() -> Result<Config, ConfigFileError> {
+        let conf_string = match fs::read_to_string(CONFIG_FILE_PATH) {
+            Err(_) => {
+                return Err(ConfigFileError::Read);
+            }
+            Ok(c) => c,
+        };
+        match toml::from_str::<Config>(conf_string.as_str()) {
+            Err(_) => Err(ConfigFileError::ParseFile),
+            Ok(c) => Ok(c),
+        }
     }
 
-    pub async fn save_to_file(&self) -> anyhow::Result<()> {
-        let conf_string = toml::to_string(self)?;
-        let mut file = File::create(CONFIG_FILE_PATH)?;
-        write!(file, "{}", conf_string.as_str())?;
-        Ok(())
+    pub async fn save_to_file(&self) -> Result<(), ConfigFileError> {
+        let conf_string = match toml::to_string(self) {
+            Err(_) => {
+                return Err(ConfigFileError::ParseState);
+            }
+            Ok(c) => c,
+        };
+        let mut file = match File::create(CONFIG_FILE_PATH) {
+            Err(_) => {
+                return Err(ConfigFileError::Write);
+            }
+            Ok(f) => f,
+        };
+        match write!(file, "{}", conf_string.as_str()) {
+            Err(_) => {
+                return Err(ConfigFileError::Write);
+            }
+            Ok(_) => Ok(()),
+        }
     }
 }
 
