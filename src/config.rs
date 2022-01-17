@@ -17,6 +17,12 @@ pub struct Settings {
     pub stand_time: u32,
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        toml::from_str(DEFAULT_CONFIG_TOML_STR).unwrap()
+    }
+}
+
 /// Default configuration of rustnot as TOML string.
 const DEFAULT_CONFIG_TOML_STR: &str = r#"
 settings.sit_time = 45
@@ -29,7 +35,7 @@ const CONFIG_FILE_PATH: &str = "rustnot_config.toml";
 lazy_static! {
     /// The current config used by rustnot.
     #[derive(Debug)]
-    pub static ref CONFIG: Mutex<Config> = Mutex::new(toml::from_str(DEFAULT_CONFIG_TOML_STR).unwrap());
+    pub static ref CONFIG: Mutex<Config> = Mutex::new(Config::default());
 }
 
 pub fn load_config() -> anyhow::Result<()> {
