@@ -13,8 +13,8 @@ pub struct Config {
 /// The application specific part of the confiuration.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Settings {
-    pub sit_time: u64,
-    pub stand_time: u64,
+    pub sit_time: u32,
+    pub stand_time: u32,
 }
 
 /// Default configuration of rustnot as TOML string.

@@ -4,7 +4,7 @@ use notify_rust::{Notification, Timeout};
 use winrt_notification::{Duration, Sound, Toast};
 
 #[cfg(unix)]
-pub fn send_notification(prompt: &str, next_toast_in: u64) {
+pub fn send_notification(prompt: &str, next_toast_in: u32) {
     Notification::new()
         .summary(prompt)
         .body(&format!(
@@ -18,7 +18,7 @@ pub fn send_notification(prompt: &str, next_toast_in: u64) {
 }
 
 #[cfg(target_os = "windows")]
-pub fn send_notification(prompt: &str, next_toast_in: u64) {
+pub fn send_notification(prompt: &str, next_toast_in: u32) {
     Toast::new(Toast::POWERSHELL_APP_ID)
         .title(prompt)
         .text1("It's time to change your stance.")

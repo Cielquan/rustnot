@@ -19,7 +19,7 @@ enum CurrentStance {
 
 fn main() {
     let mut current_stance = CurrentStance::Standing;
-    let mut waiting_time: u64;
+    let mut waiting_time: u32;
     config::load_config().unwrap();
     config::save_config().unwrap();
 
@@ -36,6 +36,6 @@ fn main() {
                 notification::send_notification("Stand Up!", waiting_time);
             }
         }
-        thread::sleep(time::Duration::from_secs(waiting_time * 60));
+        thread::sleep(time::Duration::from_secs(waiting_time as u64 * 60));
     }
 }
