@@ -1,8 +1,6 @@
 use std::fs::{self, File};
 use std::io::Write;
-use std::path::Path;
 
-use parking_lot::Mutex;
 use thiserror::Error;
 
 /// The configuration object.
@@ -74,26 +72,3 @@ stand_time = 15
 "#;
 
 const CONFIG_FILE_PATH: &str = "rustnot_config.toml";
-
-// NOTE: `unwrap` shall never trigger as the string above is always the same
-lazy_static! {
-    /// The current config used by rustnot.
-    #[derive(Debug)]
-    pub static ref CONFIG: Mutex<Config> = Mutex::new(Config::default());
-}
-
-pub fn load_config() -> anyhow::Result<()> {
-    if Path::new(CONFIG_FILE_PATH).is_file() {
-        let conf_string = fs::read_to_string(CONFIG_FILE_PATH)?;
-        let conf: Config = toml::from_str(conf_string.as_str())?;
-        *CONFIG.lock() = conf;
-    }
-    Ok(())
-}
-
-pub fn save_config() -> anyhow::Result<()> {
-    let conf_string = toml::to_string(&*CONFIG.lock())?;
-    let mut file = File::create(CONFIG_FILE_PATH)?;
-    write!(file, "{}", conf_string.as_str())?;
-    Ok(())
-}

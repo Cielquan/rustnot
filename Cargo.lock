@@ -2244,9 +2244,7 @@ version = "2.0.0"
 dependencies = [
  "anyhow",
  "iced",
- "lazy_static",
  "notify-rust",
- "parking_lot",
  "serde",
  "serde_derive",
  "thiserror",
