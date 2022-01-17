@@ -1,6 +1,5 @@
 #![windows_subsystem = "windows"]
-#[cfg(target_os = "windows")]
-extern crate winrt_notification;
+
 use anyhow::Result;
 #[cfg(unix)]
 use notify_rust::{Notification, Timeout};
