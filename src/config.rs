@@ -3,7 +3,6 @@ use std::io::Write;
 use std::path::Path;
 
 use parking_lot::Mutex;
-use toml;
 
 /// The configuration object.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -24,13 +23,13 @@ settings.sit_time = 45
 settings.stand_time = 15
 "#;
 
-const CONFIG_FILE_PATH: &'static str = "rustnot_config.toml";
+const CONFIG_FILE_PATH: &str = "rustnot_config.toml";
 
 // NOTE: `unwrap` shall never trigger as the string above is always the same
 lazy_static! {
     /// The current config used by rustnot.
     #[derive(Debug)]
-    pub static ref CONFIG: Mutex<Config> = Mutex::new(toml::from_str(&DEFAULT_CONFIG_TOML_STR).unwrap());
+    pub static ref CONFIG: Mutex<Config> = Mutex::new(toml::from_str(DEFAULT_CONFIG_TOML_STR).unwrap());
 }
 
 pub fn load_config() -> anyhow::Result<()> {
