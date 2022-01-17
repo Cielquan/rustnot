@@ -1,13 +1,13 @@
 #![windows_subsystem = "windows"]
+use std::fs::File;
+use std::io::{Read, Write};
+use std::path::Path;
+use std::{thread, time};
 
 use anyhow::Result;
 #[cfg(unix)]
 use notify_rust::{Notification, Timeout};
 use serde_derive::Deserialize;
-use std::fs::File;
-use std::io::{Read, Write};
-use std::path::Path;
-use std::{thread, time};
 use toml;
 #[cfg(target_os = "windows")]
 use winrt_notification::{Duration, Sound, Toast};
