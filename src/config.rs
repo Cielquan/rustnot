@@ -45,8 +45,8 @@ impl Config {
         }
     }
 
-    pub async fn save_to_file(&self) -> Result<(), ConfigFileError> {
-        let conf_string = match toml::to_string(self) {
+    pub async fn save_to_file(conf: Config) -> Result<(), ConfigFileError> {
+        let conf_string = match toml::to_string(&conf) {
             Err(_) => {
                 return Err(ConfigFileError::ParseState);
             }
