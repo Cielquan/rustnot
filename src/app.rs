@@ -2,10 +2,11 @@ use std::borrow::BorrowMut;
 
 use iced::{
     button, text_input, Align, Application, Button, Clipboard, Column, Command, Container, Element,
-    Length, Row, Text, TextInput,
+    Length, Radio, Row, Rule, Text, TextInput,
 };
 
-use crate::{config, style};
+use crate::config::{self, Stance};
+use crate::style;
 
 #[derive(Default)]
 pub struct App {
@@ -40,6 +41,7 @@ impl Default for State {
 pub enum Message {
     SitTimeChanged(String),
     StandTimeChanged(String),
+    StanceChanged(Stance),
     ConfigLoaded(Result<config::Config, config::ConfigFileError>),
     SaveConfig,
     ConfigSaved(Result<(), config::ConfigFileError>),
@@ -76,6 +78,10 @@ impl<'a> Application for App {
                     self.config.stand_time = dur;
                     self.state.config_saved = false;
                 }
+            }
+            Message::StanceChanged(new_stance) => {
+                self.config.start_stance = new_stance;
+                self.state.config_saved = false;
             }
             Message::ConfigLoaded(res) => {
                 if let Ok(new_conf) = res {
@@ -147,6 +153,29 @@ impl<'a> Application for App {
                 .style(self.theme),
             );
 
+        let stance_switch = Column::new()
+            .spacing(PADDING / 2)
+            .padding(PADDING)
+            .push(Text::new("Choose a starting stance:"))
+            .push(
+                Radio::new(
+                    Stance::Sitting,
+                    format!("{:?}", Stance::Sitting),
+                    Some(self.config.start_stance),
+                    Message::StanceChanged,
+                )
+                .style(self.theme),
+            )
+            .push(
+                Radio::new(
+                    Stance::Standing,
+                    format!("{:?}", Stance::Standing),
+                    Some(self.config.start_stance),
+                    Message::StanceChanged,
+                )
+                .style(self.theme),
+            );
+
         let save_state_text;
         if self.state.config_saved {
             save_state_text = "Config saved";
@@ -155,7 +184,7 @@ impl<'a> Application for App {
         }
 
         let save_btn = Column::new()
-            .padding(PADDING * 2)
+            .padding(PADDING)
             .align_items(Align::Center)
             .push(
                 Button::new(
@@ -182,7 +211,7 @@ impl<'a> Application for App {
         }
 
         let timer_btn = Column::new()
-            .padding(PADDING * 2)
+            .padding(PADDING)
             .align_items(Align::Center)
             .push(
                 Button::new(&mut self.state.timer_button, Text::new(btn_text))
@@ -193,11 +222,16 @@ impl<'a> Application for App {
             .push(Text::new(timer_state_text).size(TEXT_SIZE / 2));
 
         let content = Column::new()
+            .spacing(PADDING)
             .padding(PADDING)
             .align_items(Align::Center)
             .push(sit_time)
             .push(stand_time)
+            .push(Rule::horizontal(PADDING).style(self.theme))
+            .push(stance_switch)
+            .push(Rule::horizontal(PADDING).style(self.theme))
             .push(save_btn)
+            .push(Rule::horizontal(PADDING).style(self.theme))
             .push(timer_btn);
 
         Container::new(content)
