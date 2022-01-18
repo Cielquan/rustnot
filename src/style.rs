@@ -1,4 +1,4 @@
-use iced::{button, container, text_input, Color};
+use iced::{button, container, radio, text_input, Color};
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Theme;
@@ -106,6 +106,32 @@ impl button::StyleSheet for Button {
 impl<'a> From<Theme> for Box<dyn button::StyleSheet + 'a> {
     fn from(_: Theme) -> Self {
         Button.into()
+    }
+}
+
+pub struct Radio;
+
+impl radio::StyleSheet for Radio {
+    fn active(&self) -> radio::Style {
+        radio::Style {
+            background: SURFACE.into(),
+            dot_color: ACTIVE,
+            border_width: 1.0,
+            border_color: ACTIVE,
+        }
+    }
+
+    fn hovered(&self) -> radio::Style {
+        radio::Style {
+            background: Color { a: 0.5, ..SURFACE }.into(),
+            ..self.active()
+        }
+    }
+}
+
+impl<'a> From<Theme> for Box<dyn radio::StyleSheet + 'a> {
+    fn from(theme: Theme) -> Self {
+        Radio.into()
     }
 }
 
