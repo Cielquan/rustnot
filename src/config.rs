@@ -8,12 +8,25 @@ use thiserror::Error;
 pub struct Config {
     pub sit_time: u32,
     pub stand_time: u32,
+    pub start_stance: Stance,
 }
 
 /// The application spec
 impl Default for Config {
     fn default() -> Self {
         toml::from_str(DEFAULT_CONFIG_TOML_STR).unwrap()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub enum Stance {
+    Standing,
+    Sitting,
+}
+
+impl Default for Stance {
+    fn default() -> Self {
+        Self::Sitting
     }
 }
 
@@ -69,6 +82,7 @@ impl Config {
 const DEFAULT_CONFIG_TOML_STR: &str = r#"
 sit_time = 45
 stand_time = 15
+start_stance = "Sitting"
 "#;
 
 const CONFIG_FILE_PATH: &str = "rustnot_config.toml";
