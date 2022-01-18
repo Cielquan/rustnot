@@ -18,7 +18,7 @@ impl Default for Config {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 pub enum Stance {
     Standing,
     Sitting,
