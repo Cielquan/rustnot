@@ -5,14 +5,28 @@ use iced::{
     Length, Radio, Row, Rule, Text, TextInput,
 };
 
-use crate::config::{self, Stance};
-use crate::style;
+use parking_lot::Mutex;
+use std::sync::mpsc::{channel, Sender};
 
-#[derive(Default)]
+use crate::config::{self, Stance};
+use crate::{style, timer};
+
 pub struct App {
     config: config::Config,
     theme: style::Theme,
     state: State,
+    timer_handle: Mutex<Option<Sender<bool>>>,
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self {
+            config: config::Config::default(),
+            theme: style::Theme::default(),
+            state: State::default(),
+            timer_handle: Mutex::new(None),
+        }
+    }
 }
 
 struct State {
@@ -46,6 +60,7 @@ pub enum Message {
     SaveConfig,
     ConfigSaved(Result<(), config::ConfigFileError>),
     StartTimer,
+    TimerStopped(Result<(), timer::TimerError>),
     StopTimer,
 }
 
@@ -103,10 +118,29 @@ impl<'a> Application for App {
                 }
             }
             Message::StartTimer => {
+                let (tx, rx) = channel();
+                *self.timer_handle.lock() = Some(tx);
                 self.state.timer_running = true;
+                return Command::perform(
+                    timer::start_timer(
+                        self.config.sit_time.clone(),
+                        self.config.stand_time.clone(),
+                        rx,
+                    ),
+                    Message::TimerStopped,
+                );
+            }
+            Message::TimerStopped(res) => {
+                if res.is_ok() {
+                    self.state.timer_running = false;
+                }
             }
             Message::StopTimer => {
-                self.state.timer_running = false;
+                let mut timer_handle_guard = self.timer_handle.lock();
+                if timer_handle_guard.is_some() {
+                    let tx = std::mem::replace(&mut *timer_handle_guard, None).unwrap();
+                    return Command::perform(timer::stop_timer(tx), Message::TimerStopped);
+                }
             }
         }
         Command::none()

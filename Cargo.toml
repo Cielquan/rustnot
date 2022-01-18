@@ -9,9 +9,11 @@ edition = "2021"
 [dependencies]
 anyhow = "^1.0"
 iced = { version = "0.3", features = ["debug", "tokio"]}
+parking_lot = "0.11.2"
 serde = "^1.0"
 serde_derive = "^1.0"
 thiserror = "1.0.30"
+tokio = { version = "1.14", features = ["full"] }
 toml = "0.5.8"
 
 [target.'cfg(unix)'.dependencies]

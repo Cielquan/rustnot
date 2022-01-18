@@ -7,6 +7,7 @@ mod app;
 mod config;
 mod notification;
 mod style;
+mod timer;
 
 use iced::{window, Application, Settings};
 
