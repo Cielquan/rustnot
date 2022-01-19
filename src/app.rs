@@ -158,7 +158,7 @@ impl<'a> Application for App {
     }
 
     fn view(&mut self) -> Element<Message> {
-        const LABLE_WIDTH: u16 = 220;
+        const LABLE_WIDTH: u16 = 240;
         const TEXT_SIZE: u16 = 30;
         const PADDING: u16 = 10;
 
@@ -238,7 +238,6 @@ impl<'a> Application for App {
                 .size(TEXT_SIZE)
                 .style(self.theme),
             );
-
 
         let save_state_text;
         if self.state.config_saved {
