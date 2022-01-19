@@ -126,6 +126,7 @@ impl<'a> Application for App {
                         self.config.sit_time.clone(),
                         self.config.stand_time.clone(),
                         self.config.start_stance.clone(),
+                        self.config.toast_duration.clone(),
                         rx,
                     ),
                     Message::TimerStopped,

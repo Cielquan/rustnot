@@ -28,6 +28,7 @@ pub async fn start_timer(
     sit_time: u32,
     stand_time: u32,
     start_stance: Stance,
+    toast_duration: u32,
     rx: Receiver<bool>,
 ) -> Result<(), TimerError> {
     let init_waiting_time;
@@ -40,7 +41,7 @@ pub async fn start_timer(
         init_prompt = "Timer starts. Please stand up.";
     }
 
-    notification::send_notification(init_prompt, init_waiting_time);
+    notification::send_notification(init_prompt, init_waiting_time, toast_duration);
 
     let mut current_stance = start_stance;
     let mut waiting_time = init_waiting_time;
@@ -60,12 +61,12 @@ pub async fn start_timer(
             Stance::Standing => {
                 current_stance = Stance::Sitting;
                 waiting_time = sit_time;
-                notification::send_notification("Sit Down!", waiting_time);
+                notification::send_notification("Sit Down!", waiting_time, toast_duration);
             }
             Stance::Sitting => {
                 current_stance = Stance::Standing;
                 waiting_time = stand_time;
-                notification::send_notification("Stand Up!", waiting_time);
+                notification::send_notification("Stand Up!", waiting_time, toast_duration);
             }
         }
     }
