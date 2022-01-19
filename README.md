@@ -19,10 +19,12 @@ You can set:
 - the stance in which you start, when you start the timer.
 - the duration the notification is shown.
 
-### Notification duration
+### Notification duration on windows
 
 Because the of limitations of the libary used to send notifications on windows.
 You can only choose between 7 and 25 seconds.
+The UI will allow you to enter any number, but the actual duration will be the one
+closer to the entered one.
 
 ## Config
 
