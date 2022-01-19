@@ -9,6 +9,8 @@ Reason for this is I have a desk which can be used while standing or sitting and
 working long hours at my PC I tend to forget to change my stance once in a while to
 relax my back.
 
+![rustnut UI](rustnot-ui.png)
+
 ### Settings
 
 In the UI you can set a duration in minutes for both the standing and sitting time.
