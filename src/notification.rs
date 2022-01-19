@@ -42,5 +42,4 @@ pub fn sec_to_duration(sec: u32) -> Duration {
     } else {
         Duration::Long
     }
-
 }
