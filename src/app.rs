@@ -158,14 +158,14 @@ impl<'a> Application for App {
     }
 
     fn view(&mut self) -> Element<Message> {
-        const LABLE_WIDTH: u16 = 170;
+        const LABLE_WIDTH: u16 = 220;
         const TEXT_SIZE: u16 = 30;
         const PADDING: u16 = 10;
 
         let sit_time = Row::new()
             .padding(PADDING)
             .push(
-                Text::new("Sit Time:")
+                Text::new("Sit Time (min):")
                     .width(Length::Units(LABLE_WIDTH))
                     .size(TEXT_SIZE),
             )
@@ -183,7 +183,7 @@ impl<'a> Application for App {
         let stand_time = Row::new()
             .padding(PADDING)
             .push(
-                Text::new("Stand Time:")
+                Text::new("Stand Time (min):")
                     .width(Length::Units(LABLE_WIDTH))
                     .size(TEXT_SIZE),
             )
@@ -224,7 +224,7 @@ impl<'a> Application for App {
         let toast_duration = Row::new()
             .padding(PADDING)
             .push(
-                Text::new("Notification duration:")
+                Text::new("Notification duration (sec):")
                     .width(Length::Units(LABLE_WIDTH))
                     .size(TEXT_SIZE),
             )
