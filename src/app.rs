@@ -125,6 +125,7 @@ impl<'a> Application for App {
                     timer::start_timer(
                         self.config.sit_time.clone(),
                         self.config.stand_time.clone(),
+                        self.config.start_stance.clone(),
                         rx,
                     ),
                     Message::TimerStopped,

@@ -27,10 +27,9 @@ async fn aborter(rx: Arc<Mutex<Receiver<bool>>>) {
 pub async fn start_timer(
     sit_time: u32,
     stand_time: u32,
+    start_stance: Stance,
     rx: Receiver<bool>,
 ) -> Result<(), TimerError> {
-    let start_stance = Stance::Sitting;
-
     let init_waiting_time;
     let init_prompt;
     if start_stance == Stance::Sitting {
