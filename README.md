@@ -11,12 +11,20 @@ relax my back.
 
 ![rustnut UI](rustnot-ui.png)
 
-### Settings
+## Settings
 
-In the UI you can set a duration in minutes for both the standing and sitting time.
-You can also switch the stance in which you start, when you start the timer.
+You can set:
 
-### Config
+- a duration in minutes for both the standing and sitting time.
+- the stance in which you start, when you start the timer.
+- the duration the notification is shown.
+
+### Notification duration
+
+Because the of limitations of the libary used to send notifications on windows.
+You can only choose between 7 and 25 seconds.
+
+## Config
 
 Upon start the tool tries to read the latest safed config from a
 `rustnot_config.toml` file, if it exists. Elsewise it will load the default config.
