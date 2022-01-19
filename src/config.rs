@@ -9,6 +9,7 @@ pub struct Config {
     pub sit_time: u32,
     pub stand_time: u32,
     pub start_stance: Stance,
+    pub toast_duration: u32,
 }
 
 /// The application spec
@@ -83,6 +84,7 @@ const DEFAULT_CONFIG_TOML_STR: &str = r#"
 sit_time = 45
 stand_time = 15
 start_stance = "Sitting"
+toast_duration = 7
 "#;
 
 const CONFIG_FILE_PATH: &str = "rustnot_config.toml";

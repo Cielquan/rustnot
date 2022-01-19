@@ -34,6 +34,7 @@ The default config is:
 - 45 min sitting
 - 15 min standing
 - Sitting as starting stance
+- 7 sec notification duration
 
 ## Acknowledgements
 
