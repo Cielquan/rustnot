@@ -15,7 +15,7 @@ pub fn main() -> iced::Result {
     app::App::run(Settings {
         // antialiasing: true,
         window: window::Settings {
-            size: (350, 525),
+            size: (350, 600),
             ..window::Settings::default()
         },
         ..Settings::default()

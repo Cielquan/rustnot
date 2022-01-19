@@ -32,6 +32,7 @@ impl Default for App {
 struct State {
     sit_time: text_input::State,
     stand_time: text_input::State,
+    toast_duration: text_input::State,
     save_button: button::State,
     config_saved: bool,
     timer_button: button::State,
@@ -43,6 +44,7 @@ impl Default for State {
         Self {
             sit_time: text_input::State::default(),
             stand_time: text_input::State::default(),
+            toast_duration: text_input::State::default(),
             save_button: button::State::default(),
             config_saved: false,
             timer_button: button::State::default(),
@@ -56,6 +58,7 @@ pub enum Message {
     SitTimeChanged(String),
     StandTimeChanged(String),
     StanceChanged(Stance),
+    ToastTimeChanged(String),
     ConfigLoaded(Result<config::Config, config::ConfigFileError>),
     SaveConfig,
     ConfigSaved(Result<(), config::ConfigFileError>),
@@ -97,6 +100,12 @@ impl<'a> Application for App {
             Message::StanceChanged(new_stance) => {
                 self.config.start_stance = new_stance;
                 self.state.config_saved = false;
+            }
+            Message::ToastTimeChanged(input) => {
+                if let Ok(dur) = input.parse::<u32>() {
+                    self.config.toast_duration = dur;
+                    self.state.config_saved = false;
+                }
             }
             Message::ConfigLoaded(res) => {
                 if let Ok(new_conf) = res {
@@ -212,6 +221,25 @@ impl<'a> Application for App {
                 .style(self.theme),
             );
 
+        let toast_duration = Row::new()
+            .padding(PADDING)
+            .push(
+                Text::new("Notification duration:")
+                    .width(Length::Units(LABLE_WIDTH))
+                    .size(TEXT_SIZE),
+            )
+            .push(
+                TextInput::new(
+                    self.state.toast_duration.borrow_mut(),
+                    "Notification duration",
+                    &self.config.toast_duration.to_string()[..],
+                    Message::ToastTimeChanged,
+                )
+                .size(TEXT_SIZE)
+                .style(self.theme),
+            );
+
+
         let save_state_text;
         if self.state.config_saved {
             save_state_text = "Config saved";
@@ -265,6 +293,8 @@ impl<'a> Application for App {
             .push(stand_time)
             .push(Rule::horizontal(PADDING).style(self.theme))
             .push(stance_switch)
+            .push(Rule::horizontal(PADDING).style(self.theme))
+            .push(toast_duration)
             .push(Rule::horizontal(PADDING).style(self.theme))
             .push(save_btn)
             .push(Rule::horizontal(PADDING).style(self.theme))
