@@ -38,6 +38,16 @@ The default config is:
 - Sitting as starting stance
 - 7 sec notification duration
 
+## Known Bugs
+
+On my Linux maschine the notifications are buggy. Sometimes they work sometimes they don't.
+On Windows I don't have this issue therefore I assume that the issue lies with `notify-rust`.
+And because version 1 works on Linux I assume that the async threading thing has to do with
+the issue too.
+
+I intent to look deeper into the issue at a later time, when I use this tool on my Linux maschine
+too. But this could take some time.
+
 ## Acknowledgements
 
 The coloring/styling is copied from the [Styling example of `iced`](https://github.com/iced-rs/iced/tree/master/examples/styling)
