@@ -1,11 +1,30 @@
-use std::sync::Arc;
-
-use parking_lot::Mutex;
-use std::sync::mpsc::{Receiver, Sender};
 use thiserror::Error;
 
 use crate::config::Stance;
 use crate::notification;
+
+pub static mut TIMER_SIGNAL: TimerSignal = TimerSignal::Run;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TimerSignal {
+    Run,
+    Abort,
+}
+
+async fn sleeper(waiting_time: u64) {
+    tokio::time::sleep(tokio::time::Duration::from_secs(waiting_time * 60)).await;
+}
+
+async fn aborter() {
+    loop {
+        unsafe {
+            if TIMER_SIGNAL == TimerSignal::Abort {
+                break;
+            }
+        }
+        tokio::time::sleep(tokio::time::Duration::from_micros(1)).await;
+    }
+}
 
 #[derive(Error, Debug, Clone)]
 pub enum TimerError {}
@@ -16,20 +35,11 @@ enum FirstReturn {
     Sleeper,
 }
 
-async fn sleeper(waiting_time: u64) {
-    tokio::time::sleep(tokio::time::Duration::from_secs(waiting_time * 60)).await;
-}
-
-async fn aborter(rx: Arc<Mutex<Receiver<bool>>>) {
-    let _ = rx.lock().recv();
-}
-
 pub async fn start_timer(
     sit_time: u32,
     stand_time: u32,
     start_stance: Stance,
     toast_duration: u32,
-    rx: Receiver<bool>,
 ) -> Result<(), TimerError> {
     let init_waiting_time;
     let init_prompt;
@@ -45,12 +55,11 @@ pub async fn start_timer(
 
     let mut current_stance = start_stance;
     let mut waiting_time = init_waiting_time;
-    let packed_rx = Arc::new(Mutex::new(rx));
 
     loop {
         let res: FirstReturn = tokio::select! {
-            _ = aborter(packed_rx.clone()) => {FirstReturn::Aborter},
             _ = sleeper(waiting_time as u64) => {FirstReturn::Sleeper},
+            _ = aborter() => {FirstReturn::Aborter},
         };
 
         if res == FirstReturn::Aborter {
@@ -71,10 +80,5 @@ pub async fn start_timer(
         }
     }
 
-    Ok(())
-}
-
-pub async fn stop_timer(tx: Sender<bool>) -> Result<(), TimerError> {
-    let _ = tx.send(true);
     Ok(())
 }

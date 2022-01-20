@@ -5,9 +5,6 @@ use iced::{
     Length, Radio, Row, Rule, Text, TextInput,
 };
 
-use parking_lot::Mutex;
-use std::sync::mpsc::{channel, Sender};
-
 use crate::config::{self, Stance};
 use crate::{style, timer};
 
@@ -15,7 +12,6 @@ pub struct App {
     config: config::Config,
     theme: style::Theme,
     state: State,
-    timer_handle: Mutex<Option<Sender<bool>>>,
 }
 
 impl Default for App {
@@ -24,7 +20,6 @@ impl Default for App {
             config: config::Config::default(),
             theme: style::Theme::default(),
             state: State::default(),
-            timer_handle: Mutex::new(None),
         }
     }
 }
@@ -127,16 +122,16 @@ impl<'a> Application for App {
                 }
             }
             Message::StartTimer => {
-                let (tx, rx) = channel();
-                *self.timer_handle.lock() = Some(tx);
                 self.state.timer_running = true;
+                unsafe {
+                    timer::TIMER_SIGNAL = timer::TimerSignal::Run;
+                }
                 return Command::perform(
                     timer::start_timer(
                         self.config.sit_time.clone(),
                         self.config.stand_time.clone(),
                         self.config.start_stance.clone(),
                         self.config.toast_duration.clone(),
-                        rx,
                     ),
                     Message::TimerStopped,
                 );
@@ -146,13 +141,9 @@ impl<'a> Application for App {
                     self.state.timer_running = false;
                 }
             }
-            Message::StopTimer => {
-                let mut timer_handle_guard = self.timer_handle.lock();
-                if timer_handle_guard.is_some() {
-                    let tx = std::mem::replace(&mut *timer_handle_guard, None).unwrap();
-                    return Command::perform(timer::stop_timer(tx), Message::TimerStopped);
-                }
-            }
+            Message::StopTimer => unsafe {
+                timer::TIMER_SIGNAL = timer::TimerSignal::Abort;
+            },
         }
         Command::none()
     }
