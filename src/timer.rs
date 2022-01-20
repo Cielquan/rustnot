@@ -1,9 +1,12 @@
+use parking_lot::Mutex;
 use thiserror::Error;
 
 use crate::config::Stance;
 use crate::notification;
 
-pub static mut TIMER_SIGNAL: TimerSignal = TimerSignal::Run;
+lazy_static! {
+    pub static ref TIMER_SIGNAL: Mutex<TimerSignal> = Mutex::new(TimerSignal::Run);
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TimerSignal {
@@ -17,10 +20,8 @@ async fn sleeper(waiting_time: u64) {
 
 async fn aborter() {
     loop {
-        unsafe {
-            if TIMER_SIGNAL == TimerSignal::Abort {
-                break;
-            }
+        if *TIMER_SIGNAL.lock() == TimerSignal::Abort {
+            break;
         }
         tokio::time::sleep(tokio::time::Duration::from_micros(1)).await;
     }

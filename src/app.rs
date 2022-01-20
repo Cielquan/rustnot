@@ -123,9 +123,7 @@ impl<'a> Application for App {
             }
             Message::StartTimer => {
                 self.state.timer_running = true;
-                unsafe {
-                    timer::TIMER_SIGNAL = timer::TimerSignal::Run;
-                }
+                *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Run;
                 return Command::perform(
                     timer::start_timer(
                         self.config.sit_time.clone(),
@@ -141,9 +139,9 @@ impl<'a> Application for App {
                     self.state.timer_running = false;
                 }
             }
-            Message::StopTimer => unsafe {
-                timer::TIMER_SIGNAL = timer::TimerSignal::Abort;
-            },
+            Message::StopTimer => {
+                *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Abort;
+            }
         }
         Command::none()
     }
