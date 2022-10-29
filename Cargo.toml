@@ -8,17 +8,17 @@ edition = "2021"
 
 [dependencies]
 anyhow = "^1.0"
-iced = { version = "0.3", features = ["debug", "tokio"]}
-lazy_static = "1.4.0"
-parking_lot = "0.11.2"
+iced = { version = "^0.3", features = ["debug", "tokio"]}
+lazy_static = "^1.4"
+parking_lot = "^0.12"
 serde = "^1.0"
 serde_derive = "^1.0"
-thiserror = "1.0.30"
-tokio = { version = "1.14", features = ["macros", "time"] }
-toml = "0.5.8"
+thiserror = "^1.0.30"
+tokio = { version = "^1.14", features = ["macros", "time"] }
+toml = "^0.5.8"
 
 [target.'cfg(unix)'.dependencies]
 notify-rust = "^4"
 
 [target.'cfg(windows)'.dependencies]
-winrt-notification = "0.3.1"
+winrt-notification = "^0.3.1"
