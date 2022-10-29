@@ -323,7 +323,7 @@ impl<'a> Application for App {
                     Text::new("Save config to file"),
                 )
                 .padding(BUTTON_PADDING)
-                .style(self.theme)
+                .style(style::Button::Normal)
                 .on_press(Message::SaveConfigToFile),
             )
             .push(Text::new(save_state_text).size(TEXT_SIZE_SMALL));
@@ -410,12 +410,15 @@ impl<'a> Application for App {
 
         let timer_controll_btn_text;
         let timer_controll_btn_on_press;
+        let timer_controll_btn_style: style::Button;
         if self.state.timer_running {
             timer_controll_btn_text = "Stop Timer";
             timer_controll_btn_on_press = Message::StopTimer;
+            timer_controll_btn_style = style::Button::Destructive;
         } else {
             timer_controll_btn_text = "Start Timer";
             timer_controll_btn_on_press = Message::StartTimer;
+            timer_controll_btn_style = style::Button::Normal;
         }
 
         let timer_controll_btn = Column::new()
@@ -428,7 +431,7 @@ impl<'a> Application for App {
                 )
                 .padding(BUTTON_PADDING)
                 .width(Length::Units(105))
-                .style(self.theme)
+                .style(timer_controll_btn_style)
                 .on_press(timer_controll_btn_on_press),
             );
 
@@ -441,7 +444,7 @@ impl<'a> Application for App {
                     Text::new("Switch stance now"),
                 )
                 .padding(BUTTON_PADDING)
-                .style(self.theme)
+                .style(style::Button::Normal)
                 .on_press(Message::SwitchStance),
             );
 

@@ -1,4 +1,4 @@
-use iced::{button, container, radio, rule, text_input, Color};
+use iced::{button, container, radio, rule, text_input, Background, Color};
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Theme;
@@ -21,10 +21,22 @@ const ACTIVE: Color = Color::from_rgb(
     0xDA as f32 / 255.0,
 );
 
+const DESTRUCTIVE: Color = Color::from_rgb(
+    0xCC as f32 / 255.0,
+    0x33 as f32 / 255.0,
+    0x33 as f32 / 255.0,
+);
+
 const HOVERED: Color = Color::from_rgb(
     0x67 as f32 / 255.0,
     0x7B as f32 / 255.0,
     0xC4 as f32 / 255.0,
+);
+
+const DESTRUCTIVE_HOVERED: Color = Color::from_rgb(
+    0xCC as f32 / 255.0,
+    0x00 as f32 / 255.0,
+    0x00 as f32 / 255.0,
 );
 
 pub struct TextInput;
@@ -74,12 +86,18 @@ impl<'a> From<Theme> for Box<dyn text_input::StyleSheet + 'a> {
     }
 }
 
-pub struct Button;
+pub enum Button {
+    Normal,
+    Destructive,
+}
 
 impl button::StyleSheet for Button {
     fn active(&self) -> button::Style {
         button::Style {
-            background: ACTIVE.into(),
+            background: Some(Background::Color(match self {
+                Button::Normal => ACTIVE.into(),
+                Button::Destructive => DESTRUCTIVE.into(),
+            })),
             border_radius: 3.0,
             text_color: Color::WHITE,
             ..button::Style::default()
@@ -88,8 +106,10 @@ impl button::StyleSheet for Button {
 
     fn hovered(&self) -> button::Style {
         button::Style {
-            background: HOVERED.into(),
-            text_color: Color::WHITE,
+            background: Some(Background::Color(match self {
+                Button::Normal => HOVERED.into(),
+                Button::Destructive => DESTRUCTIVE_HOVERED.into(),
+            })),
             ..self.active()
         }
     }
@@ -100,12 +120,6 @@ impl button::StyleSheet for Button {
             border_color: Color::WHITE,
             ..self.hovered()
         }
-    }
-}
-
-impl<'a> From<Theme> for Box<dyn button::StyleSheet + 'a> {
-    fn from(_: Theme) -> Self {
-        Button.into()
     }
 }
 
