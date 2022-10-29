@@ -86,6 +86,7 @@ impl<'a> Application for App {
         match message {
             Message::ConfigFileLoaded(res) => {
                 if let Ok(new_conf) = res {
+                    self.state.current_stance = new_conf.start_stance;
                     self.config = new_conf;
                     self.state.config_saved = true;
                 }
@@ -117,6 +118,9 @@ impl<'a> Application for App {
             }
             Message::ConfigValueStanceChanged(new_stance) => {
                 self.config.start_stance = new_stance;
+                if self.state.timer_running == false {
+                    self.state.current_stance = new_stance;
+                }
                 self.state.config_saved = false;
             }
             Message::ConfigValueToastTimeChanged(input) => {
@@ -147,7 +151,10 @@ impl<'a> Application for App {
                 );
             }
             Message::TimerCycleFinished(res) => match res {
-                CycleResult::Aborted => self.state.timer_running = false,
+                CycleResult::Aborted => {
+                    self.state.timer_running = false;
+                    self.state.current_stance = self.config.start_stance;
+                }
                 CycleResult::OK => {
                     match self.state.current_stance {
                         Stance::Sitting => self.state.current_stance = Stance::Standing,
