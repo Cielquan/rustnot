@@ -34,6 +34,7 @@ struct State {
     timer_button: button::State,
     timer_running: bool,
     current_stance: Stance,
+    stance_switch_button: button::State,
 }
 
 impl Default for State {
@@ -47,6 +48,7 @@ impl Default for State {
             timer_button: button::State::default(),
             timer_running: false,
             current_stance: Stance::default(),
+            stance_switch_button: button::State::default(),
         }
     }
 }
@@ -64,6 +66,7 @@ pub enum Message {
     StopTimer,
     StartTimerCycle(bool),
     TimerCycleFinished(timer::CycleResult),
+    SwitchStance,
 }
 
 impl<'a> Application for App {
@@ -166,6 +169,9 @@ impl<'a> Application for App {
             Message::StopTimer => {
                 *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Abort;
             }
+            Message::SwitchStance => {
+                *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Abort;
+            }
         }
         Command::none()
     }
@@ -183,6 +189,7 @@ impl<'a> Application for App {
         const BUTTON_PADDING: u16 = 10;
 
         const ROW_PADDING: u16 = 15;
+        const ROW_SPACING: u16 = 10;
         const COL_PADDING: u16 = 15;
         const COL_SPACING: u16 = 10;
 
@@ -336,6 +343,28 @@ impl<'a> Application for App {
             .horizontal_alignment(alignment::Horizontal::Center)
             .size(TEXT_SIZE_HEADING);
 
+        let timer_state_text_content;
+        if self.state.timer_running {
+            timer_state_text_content = "Running ...";
+        } else {
+            timer_state_text_content = "Stopped";
+        }
+
+        let timer_state_text = Row::new()
+            .width(Length::Fill)
+            .align_items(Alignment::Center)
+            .push(
+                Text::new("Timer:")
+                    .width(Length::Fill)
+                    .horizontal_alignment(alignment::Horizontal::Left)
+                    .size(TEXT_SIZE_NORMAL),
+            )
+            .push(
+                Text::new(timer_state_text_content)
+                    .horizontal_alignment(alignment::Horizontal::Right)
+                    .size(TEXT_SIZE_NORMAL),
+            );
+
         let stance_text = Row::new()
             .width(Length::Fill)
             .align_items(Alignment::Center)
@@ -351,7 +380,7 @@ impl<'a> Application for App {
                     .size(TEXT_SIZE_NORMAL),
             );
 
-        let timer_text = Row::new()
+        let timer_time_text = Row::new()
             .width(Length::Fill)
             .align_items(Alignment::Center)
             .push(
@@ -370,32 +399,53 @@ impl<'a> Application for App {
             .padding(COL_PADDING)
             .spacing(COL_SPACING)
             .width(Length::Fill)
+            .push(timer_state_text)
             .push(stance_text)
-            .push(timer_text);
+            .push(timer_time_text);
 
-        let btn_text;
-        let btn_on_press;
-        let timer_state_text;
+        let timer_controll_btn_text;
+        let timer_controll_btn_on_press;
         if self.state.timer_running {
-            btn_text = "Stop Timer";
-            btn_on_press = Message::StopTimer;
-            timer_state_text = "Running ...";
+            timer_controll_btn_text = "Stop Timer";
+            timer_controll_btn_on_press = Message::StopTimer;
         } else {
-            btn_text = "Start Timer";
-            btn_on_press = Message::StartTimer;
-            timer_state_text = "Stopped";
+            timer_controll_btn_text = "Start Timer";
+            timer_controll_btn_on_press = Message::StartTimer;
         }
 
-        let timer_btn = Column::new()
+        let timer_controll_btn = Column::new()
             .padding(COL_PADDING)
             .align_items(Alignment::Center)
             .push(
-                Button::new(&mut self.state.timer_button, Text::new(btn_text))
-                    .padding(BUTTON_PADDING)
-                    .style(self.theme)
-                    .on_press(btn_on_press),
-            )
-            .push(Text::new(timer_state_text).size(TEXT_SIZE_SMALL));
+                Button::new(
+                    &mut self.state.timer_button,
+                    Text::new(timer_controll_btn_text),
+                )
+                .padding(BUTTON_PADDING)
+                .width(Length::Units(105))
+                .style(self.theme)
+                .on_press(timer_controll_btn_on_press),
+            );
+
+        let stance_switch_btn = Column::new()
+            .padding(COL_PADDING)
+            .align_items(Alignment::Center)
+            .push(
+                Button::new(
+                    &mut self.state.stance_switch_button,
+                    Text::new("Switch stance now"),
+                )
+                .padding(BUTTON_PADDING)
+                .style(self.theme)
+                .on_press(Message::SwitchStance),
+            );
+
+        let timer_buttons = Row::new()
+            .padding(ROW_PADDING)
+            .spacing(ROW_SPACING)
+            .width(Length::Fill)
+            .push(timer_controll_btn)
+            .push(stance_switch_btn);
 
         let timer_column = Column::new()
             .padding(MAIN_COLUMNS_PADDING)
@@ -406,7 +456,7 @@ impl<'a> Application for App {
             .push(Rule::horizontal(HORIZONTAL_RULE_PADDING).style(self.theme))
             .push(info_texts)
             .push(Rule::horizontal(HORIZONTAL_RULE_PADDING).style(self.theme))
-            .push(timer_btn);
+            .push(timer_buttons);
 
         let content = Row::new()
             .width(Length::Fill)
