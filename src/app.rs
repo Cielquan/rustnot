@@ -154,23 +154,28 @@ impl<'a> Application for App {
                 );
             }
             Message::TimerCycleFinished(res) => match res {
-                CycleResult::Aborted => {
-                    self.state.timer_running = false;
-                    self.state.current_stance = self.config.start_stance;
-                }
-                CycleResult::OK => {
+                CycleResult::OK | CycleResult::Skipped => {
+                    if res == CycleResult::Skipped {
+                        *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Run;
+                    }
                     match self.state.current_stance {
                         Stance::Sitting => self.state.current_stance = Stance::Standing,
                         Stance::Standing => self.state.current_stance = Stance::Sitting,
                     };
                     return Command::perform(async { false }, Message::StartTimerCycle);
                 }
+                CycleResult::Aborted => {
+                    self.state.timer_running = false;
+                    self.state.current_stance = self.config.start_stance;
+                }
             },
             Message::StopTimer => {
                 *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Abort;
             }
             Message::SwitchStance => {
-                *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Abort;
+                if self.state.timer_running == true {
+                    *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Skip;
+                }
             }
         }
         Command::none()

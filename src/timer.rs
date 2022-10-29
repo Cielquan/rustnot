@@ -11,6 +11,7 @@ lazy_static! {
 pub enum TimerSignal {
     Run,
     Abort,
+    Skip,
 }
 
 async fn sleeper(waiting_time: u64) {
@@ -26,16 +27,27 @@ async fn aborter() {
     }
 }
 
+async fn skipper() {
+    loop {
+        if *TIMER_SIGNAL.lock() == TimerSignal::Skip {
+            break;
+        }
+        tokio::time::sleep(tokio::time::Duration::from_millis(1)).await;
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum FirstReturn {
-    Aborter,
     Sleeper,
+    Aborter,
+    Skipper,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CycleResult {
-    Aborted,
     OK,
+    Aborted,
+    Skipped,
 }
 
 pub async fn run_cycle_timer(
@@ -61,13 +73,16 @@ pub async fn run_cycle_timer(
     match tokio::select! {
         _ = sleeper(cycle_duration as u64) => {FirstReturn::Sleeper},
         _ = aborter() => {FirstReturn::Aborter},
+        _ = skipper() => {FirstReturn::Skipper},
     } {
+        FirstReturn::Sleeper => {
+            return CycleResult::OK;
+        }
         FirstReturn::Aborter => {
             return CycleResult::Aborted;
         }
-
-        FirstReturn::Sleeper => {
-            return CycleResult::OK;
+        FirstReturn::Skipper => {
+            return CycleResult::Skipped;
         }
     }
 }
