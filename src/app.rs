@@ -50,13 +50,13 @@ impl Default for State {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    SitTimeChanged(String),
-    StandTimeChanged(String),
-    StanceChanged(Stance),
-    ToastTimeChanged(String),
-    ConfigLoaded(Result<config::Config, config::ConfigFileError>),
-    SaveConfig,
-    ConfigSaved(Result<(), config::ConfigFileError>),
+    ConfigFileLoaded(Result<config::Config, config::ConfigFileError>),
+    SaveConfigToFile,
+    ConfigSavedToFile(Result<(), config::ConfigFileError>),
+    ConfigValueSitTimeChanged(String),
+    ConfigValueStandTimeChanged(String),
+    ConfigValueStanceChanged(Stance),
+    ConfigValueToastTimeChanged(String),
     StartTimer,
     TimerStopped(Result<(), timer::TimerError>),
     StopTimer,
@@ -70,7 +70,7 @@ impl<'a> Application for App {
     fn new(_flags: ()) -> (Self, Command<Message>) {
         (
             Self::default(),
-            Command::perform(config::Config::load_from_file(), Message::ConfigLoaded),
+            Command::perform(config::Config::load_from_file(), Message::ConfigFileLoaded),
         )
     }
 
@@ -80,44 +80,44 @@ impl<'a> Application for App {
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
-            Message::SitTimeChanged(input) => {
-                if let Ok(dur) = input.parse::<u32>() {
-                    self.config.sit_time = dur;
-                    self.state.config_saved = false;
-                }
-            }
-            Message::StandTimeChanged(input) => {
-                if let Ok(dur) = input.parse::<u32>() {
-                    self.config.stand_time = dur;
-                    self.state.config_saved = false;
-                }
-            }
-            Message::StanceChanged(new_stance) => {
-                self.config.start_stance = new_stance;
-                self.state.config_saved = false;
-            }
-            Message::ToastTimeChanged(input) => {
-                if let Ok(dur) = input.parse::<u32>() {
-                    self.config.toast_duration = dur;
-                    self.state.config_saved = false;
-                }
-            }
-            Message::ConfigLoaded(res) => {
+            Message::ConfigFileLoaded(res) => {
                 if let Ok(new_conf) = res {
                     self.config = new_conf;
                     self.state.config_saved = true;
                 }
             }
-            Message::SaveConfig => {
+            Message::SaveConfigToFile => {
                 return Command::perform(
                     config::Config::save_to_file(self.config.clone()),
-                    Message::ConfigSaved,
+                    Message::ConfigSavedToFile,
                 );
             }
-            Message::ConfigSaved(res) => {
+            Message::ConfigSavedToFile(res) => {
                 if res.is_ok() {
                     self.state.config_saved = true;
                 } else {
+                    self.state.config_saved = false;
+                }
+            }
+            Message::ConfigValueSitTimeChanged(input) => {
+                if let Ok(dur) = input.parse::<u32>() {
+                    self.config.sit_time = dur;
+                    self.state.config_saved = false;
+                }
+            }
+            Message::ConfigValueStandTimeChanged(input) => {
+                if let Ok(dur) = input.parse::<u32>() {
+                    self.config.stand_time = dur;
+                    self.state.config_saved = false;
+                }
+            }
+            Message::ConfigValueStanceChanged(new_stance) => {
+                self.config.start_stance = new_stance;
+                self.state.config_saved = false;
+            }
+            Message::ConfigValueToastTimeChanged(input) => {
+                if let Ok(dur) = input.parse::<u32>() {
+                    self.config.toast_duration = dur;
                     self.state.config_saved = false;
                 }
             }
@@ -163,7 +163,7 @@ impl<'a> Application for App {
                     self.state.sit_time.borrow_mut(),
                     "Sit time",
                     &self.config.sit_time.to_string()[..],
-                    Message::SitTimeChanged,
+                    Message::ConfigValueSitTimeChanged,
                 )
                 .size(TEXT_SIZE)
                 .style(self.theme),
@@ -181,7 +181,7 @@ impl<'a> Application for App {
                     self.state.stand_time.borrow_mut(),
                     "Stand time",
                     &self.config.stand_time.to_string()[..],
-                    Message::StandTimeChanged,
+                    Message::ConfigValueStandTimeChanged,
                 )
                 .size(TEXT_SIZE)
                 .style(self.theme),
@@ -196,7 +196,7 @@ impl<'a> Application for App {
                     Stance::Sitting,
                     format!("{:?}", Stance::Sitting),
                     Some(self.config.start_stance),
-                    Message::StanceChanged,
+                    Message::ConfigValueStanceChanged,
                 )
                 .style(self.theme),
             )
@@ -205,7 +205,7 @@ impl<'a> Application for App {
                     Stance::Standing,
                     format!("{:?}", Stance::Standing),
                     Some(self.config.start_stance),
-                    Message::StanceChanged,
+                    Message::ConfigValueStanceChanged,
                 )
                 .style(self.theme),
             );
@@ -222,7 +222,7 @@ impl<'a> Application for App {
                     self.state.toast_duration.borrow_mut(),
                     "Notification duration",
                     &self.config.toast_duration.to_string()[..],
-                    Message::ToastTimeChanged,
+                    Message::ConfigValueToastTimeChanged,
                 )
                 .size(TEXT_SIZE)
                 .style(self.theme),
@@ -245,7 +245,7 @@ impl<'a> Application for App {
                 )
                 .padding(PADDING)
                 .style(self.theme)
-                .on_press(Message::SaveConfig),
+                .on_press(Message::SaveConfigToFile),
             )
             .push(Text::new(save_state_text).size(TEXT_SIZE / 2));
 
