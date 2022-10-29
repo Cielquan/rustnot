@@ -6,6 +6,7 @@ use iced::{
 };
 
 use crate::config::{self, Stance};
+use crate::timer::CycleResult;
 use crate::{style, timer};
 
 pub struct App {
@@ -32,6 +33,7 @@ struct State {
     config_saved: bool,
     timer_button: button::State,
     timer_running: bool,
+    current_stance: Stance,
 }
 
 impl Default for State {
@@ -44,6 +46,7 @@ impl Default for State {
             config_saved: false,
             timer_button: button::State::default(),
             timer_running: false,
+            current_stance: Stance::default(),
         }
     }
 }
@@ -58,8 +61,9 @@ pub enum Message {
     ConfigValueStanceChanged(Stance),
     ConfigValueToastTimeChanged(String),
     StartTimer,
-    TimerStopped(Result<(), timer::TimerError>),
     StopTimer,
+    StartTimerCycle(bool),
+    TimerCycleFinished(timer::CycleResult),
 }
 
 impl<'a> Application for App {
@@ -124,21 +128,34 @@ impl<'a> Application for App {
             Message::StartTimer => {
                 self.state.timer_running = true;
                 *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Run;
+                self.state.current_stance = self.config.start_stance.clone();
+                return Command::perform(async { true }, Message::StartTimerCycle);
+            }
+            Message::StartTimerCycle(is_init) => {
                 return Command::perform(
-                    timer::start_timer(
-                        self.config.sit_time.clone(),
-                        self.config.stand_time.clone(),
-                        self.config.start_stance.clone(),
+                    timer::run_cycle_timer(
+                        self.state.current_stance.clone(),
+                        if self.state.current_stance == Stance::Sitting {
+                            self.config.sit_time
+                        } else {
+                            self.config.stand_time
+                        },
+                        is_init,
                         self.config.toast_duration.clone(),
                     ),
-                    Message::TimerStopped,
+                    Message::TimerCycleFinished,
                 );
             }
-            Message::TimerStopped(res) => {
-                if res.is_ok() {
-                    self.state.timer_running = false;
+            Message::TimerCycleFinished(res) => match res {
+                CycleResult::Aborted => self.state.timer_running = false,
+                CycleResult::OK => {
+                    match self.state.current_stance {
+                        Stance::Sitting => self.state.current_stance = Stance::Standing,
+                        Stance::Standing => self.state.current_stance = Stance::Sitting,
+                    };
+                    return Command::perform(async { false }, Message::StartTimerCycle);
                 }
-            }
+            },
             Message::StopTimer => {
                 *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Abort;
             }

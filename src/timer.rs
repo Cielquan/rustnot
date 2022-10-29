@@ -1,5 +1,4 @@
 use parking_lot::Mutex;
-use thiserror::Error;
 
 use crate::config::Stance;
 use crate::notification;
@@ -15,7 +14,7 @@ pub enum TimerSignal {
 }
 
 async fn sleeper(waiting_time: u64) {
-    tokio::time::sleep(tokio::time::Duration::from_secs(waiting_time * 60)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(waiting_time)).await;
 }
 
 async fn aborter() {
@@ -27,59 +26,48 @@ async fn aborter() {
     }
 }
 
-#[derive(Error, Debug, Clone)]
-pub enum TimerError {}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum FirstReturn {
     Aborter,
     Sleeper,
 }
 
-pub async fn start_timer(
-    sit_time: u32,
-    stand_time: u32,
-    start_stance: Stance,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CycleResult {
+    Aborted,
+    OK,
+}
+
+pub async fn run_cycle_timer(
+    cycle_stance: Stance,
+    cycle_duration: u32,
+    is_init_cycle: bool,
     toast_duration: u32,
-) -> Result<(), TimerError> {
-    let init_waiting_time;
-    let init_prompt;
-    if start_stance == Stance::Sitting {
-        init_waiting_time = sit_time;
-        init_prompt = "Timer starts. Please sit Down.";
+) -> CycleResult {
+    let mut prompt;
+
+    if cycle_stance == Stance::Sitting {
+        prompt = String::from("Please sit Down.");
     } else {
-        init_waiting_time = stand_time;
-        init_prompt = "Timer starts. Please stand up.";
+        prompt = String::from("Please stand up.");
     }
 
-    notification::send_notification(init_prompt, init_waiting_time, toast_duration);
-
-    let mut current_stance = start_stance;
-    let mut waiting_time = init_waiting_time;
-
-    loop {
-        let res: FirstReturn = tokio::select! {
-            _ = sleeper(waiting_time as u64) => {FirstReturn::Sleeper},
-            _ = aborter() => {FirstReturn::Aborter},
-        };
-
-        if res == FirstReturn::Aborter {
-            break;
-        }
-
-        match current_stance {
-            Stance::Standing => {
-                current_stance = Stance::Sitting;
-                waiting_time = sit_time;
-                notification::send_notification("Sit Down!", waiting_time, toast_duration);
-            }
-            Stance::Sitting => {
-                current_stance = Stance::Standing;
-                waiting_time = stand_time;
-                notification::send_notification("Stand Up!", waiting_time, toast_duration);
-            }
-        }
+    if is_init_cycle == true {
+        prompt = format!("Timer starts. {}", prompt);
     }
 
-    Ok(())
+    notification::send_notification(&prompt, cycle_duration, toast_duration);
+
+    match tokio::select! {
+        _ = sleeper(cycle_duration as u64) => {FirstReturn::Sleeper},
+        _ = aborter() => {FirstReturn::Aborter},
+    } {
+        FirstReturn::Aborter => {
+            return CycleResult::Aborted;
+        }
+
+        FirstReturn::Sleeper => {
+            return CycleResult::OK;
+        }
+    }
 }
