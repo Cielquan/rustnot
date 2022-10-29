@@ -23,7 +23,7 @@ async fn aborter() {
         if *TIMER_SIGNAL.lock() == TimerSignal::Abort {
             break;
         }
-        tokio::time::sleep(tokio::time::Duration::from_micros(1)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(1)).await;
     }
 }
 
