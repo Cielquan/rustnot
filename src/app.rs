@@ -1,7 +1,7 @@
 use std::borrow::BorrowMut;
 
 use iced::{
-    button, text_input, Align, Application, Button, Clipboard, Column, Command, Container, Element,
+    button, text_input, Alignment, Application, Button, Column, Command, Container, Element,
     Length, Radio, Row, Rule, Text, TextInput,
 };
 
@@ -78,7 +78,7 @@ impl<'a> Application for App {
         String::from("rustnot")
     }
 
-    fn update(&mut self, message: Message, _: &mut Clipboard) -> Command<Message> {
+    fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::SitTimeChanged(input) => {
                 if let Ok(dur) = input.parse::<u32>() {
@@ -237,7 +237,7 @@ impl<'a> Application for App {
 
         let save_btn = Column::new()
             .padding(PADDING)
-            .align_items(Align::Center)
+            .align_items(Alignment::Center)
             .push(
                 Button::new(
                     &mut self.state.save_button,
@@ -264,7 +264,7 @@ impl<'a> Application for App {
 
         let timer_btn = Column::new()
             .padding(PADDING)
-            .align_items(Align::Center)
+            .align_items(Alignment::Center)
             .push(
                 Button::new(&mut self.state.timer_button, Text::new(btn_text))
                     .padding(PADDING)
@@ -276,7 +276,7 @@ impl<'a> Application for App {
         let content = Column::new()
             .spacing(PADDING)
             .padding(PADDING)
-            .align_items(Align::Center)
+            .align_items(Alignment::Center)
             .push(sit_time)
             .push(stand_time)
             .push(Rule::horizontal(PADDING).style(self.theme))
