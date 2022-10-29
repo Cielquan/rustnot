@@ -1,8 +1,8 @@
 use std::borrow::BorrowMut;
 
 use iced::{
-    button, text_input, Alignment, Application, Button, Column, Command, Container, Element,
-    Length, Radio, Row, Rule, Text, TextInput,
+    alignment, button, text_input, Alignment, Application, Button, Column, Command, Container,
+    Element, Length, Radio, Row, Rule, Text, TextInput,
 };
 
 use crate::config::{self, Stance};
@@ -164,50 +164,90 @@ impl<'a> Application for App {
     }
 
     fn view(&mut self) -> Element<Message> {
-        const LABLE_WIDTH: u16 = 240;
-        const TEXT_SIZE: u16 = 30;
-        const PADDING: u16 = 10;
+        const MAIN_COLUMNS_WIDTH: u16 = 400;
+        const MAIN_COLUMNS_PADDING: u16 = 20;
+        const MAIN_COLUMNS_SPACING: u16 = 10;
+
+        /// Space left and right of rule
+        const VERTICAL_RULE_PADDING: u16 = 0;
+        /// Space above and below of rule
+        const HORIZONTAL_RULE_PADDING: u16 = 10;
+
+        const BUTTON_PADDING: u16 = 10;
+
+        const ROW_PADDING: u16 = 15;
+        const COL_PADDING: u16 = 15;
+        const COL_SPACING: u16 = 10;
+
+        const TEXTBOX_WIDTH: u16 = 50;
+
+        const TEXT_SIZE_HEADING: u16 = 45;
+        const TEXT_SIZE_NORMAL: u16 = 30;
+        const TEXT_SIZE_SMALL: u16 = 15;
+
+        let config_heading = Text::new("Config")
+            .width(Length::Fill)
+            .horizontal_alignment(alignment::Horizontal::Center)
+            .size(TEXT_SIZE_HEADING);
 
         let sit_time = Row::new()
-            .padding(PADDING)
+            .width(Length::Fill)
+            .align_items(Alignment::Fill)
             .push(
-                Text::new("Sit Time (min):")
-                    .width(Length::Units(LABLE_WIDTH))
-                    .size(TEXT_SIZE),
+                Text::new("Sit time [min]:")
+                    .width(Length::Fill)
+                    .horizontal_alignment(alignment::Horizontal::Left)
+                    .size(TEXT_SIZE_NORMAL),
             )
             .push(
                 TextInput::new(
                     self.state.sit_time.borrow_mut(),
-                    "Sit time",
+                    "...",
                     &self.config.sit_time.to_string()[..],
                     Message::ConfigValueSitTimeChanged,
                 )
-                .size(TEXT_SIZE)
+                .width(Length::Units(TEXTBOX_WIDTH))
+                .size(TEXT_SIZE_NORMAL)
                 .style(self.theme),
             );
 
         let stand_time = Row::new()
-            .padding(PADDING)
+            .width(Length::Fill)
+            .align_items(Alignment::Fill)
             .push(
-                Text::new("Stand Time (min):")
-                    .width(Length::Units(LABLE_WIDTH))
-                    .size(TEXT_SIZE),
+                Text::new("Stand time [min]:")
+                    .width(Length::Fill)
+                    .horizontal_alignment(alignment::Horizontal::Left)
+                    .size(TEXT_SIZE_NORMAL),
             )
             .push(
                 TextInput::new(
                     self.state.stand_time.borrow_mut(),
-                    "Stand time",
+                    "...",
                     &self.config.stand_time.to_string()[..],
                     Message::ConfigValueStandTimeChanged,
                 )
-                .size(TEXT_SIZE)
+                .width(Length::Units(TEXTBOX_WIDTH))
+                .size(TEXT_SIZE_NORMAL)
                 .style(self.theme),
             );
 
+        let set_times = Column::new()
+            .padding(COL_PADDING)
+            .spacing(COL_SPACING)
+            .width(Length::Fill)
+            .push(sit_time)
+            .push(stand_time);
+
         let stance_switch = Column::new()
-            .spacing(PADDING / 2)
-            .padding(PADDING)
-            .push(Text::new("Choose a starting stance:"))
+            .padding(COL_PADDING)
+            .spacing(COL_SPACING)
+            .push(
+                Text::new("Choose a starting stance:")
+                    .width(Length::Fill)
+                    .horizontal_alignment(alignment::Horizontal::Left)
+                    .size(TEXT_SIZE_NORMAL),
+            )
             .push(
                 Radio::new(
                     Stance::Sitting,
@@ -228,20 +268,23 @@ impl<'a> Application for App {
             );
 
         let toast_duration = Row::new()
-            .padding(PADDING)
+            .padding(ROW_PADDING)
+            .width(Length::Fill)
+            .align_items(Alignment::Fill)
             .push(
-                Text::new("Notification duration (sec):")
-                    .width(Length::Units(LABLE_WIDTH))
-                    .size(TEXT_SIZE),
+                Text::new("Notification time [sec]:")
+                    .width(Length::Fill)
+                    .size(TEXT_SIZE_NORMAL),
             )
             .push(
                 TextInput::new(
                     self.state.toast_duration.borrow_mut(),
-                    "Notification duration",
+                    "...",
                     &self.config.toast_duration.to_string()[..],
                     Message::ConfigValueToastTimeChanged,
                 )
-                .size(TEXT_SIZE)
+                .width(Length::Units(TEXTBOX_WIDTH))
+                .size(TEXT_SIZE_NORMAL)
                 .style(self.theme),
             );
 
@@ -253,18 +296,75 @@ impl<'a> Application for App {
         }
 
         let save_btn = Column::new()
-            .padding(PADDING)
+            .padding(COL_PADDING)
             .align_items(Alignment::Center)
             .push(
                 Button::new(
                     &mut self.state.save_button,
                     Text::new("Save config to file"),
                 )
-                .padding(PADDING)
+                .padding(BUTTON_PADDING)
                 .style(self.theme)
                 .on_press(Message::SaveConfigToFile),
             )
-            .push(Text::new(save_state_text).size(TEXT_SIZE / 2));
+            .push(Text::new(save_state_text).size(TEXT_SIZE_SMALL));
+
+        let config_column = Column::new()
+            .padding(MAIN_COLUMNS_PADDING)
+            .spacing(MAIN_COLUMNS_SPACING)
+            .width(Length::Units(MAIN_COLUMNS_WIDTH))
+            .align_items(Alignment::Center)
+            .push(config_heading)
+            .push(Rule::horizontal(HORIZONTAL_RULE_PADDING).style(self.theme))
+            .push(set_times)
+            .push(Rule::horizontal(HORIZONTAL_RULE_PADDING).style(self.theme))
+            .push(stance_switch)
+            .push(Rule::horizontal(HORIZONTAL_RULE_PADDING).style(self.theme))
+            .push(toast_duration)
+            .push(Rule::horizontal(HORIZONTAL_RULE_PADDING).style(self.theme))
+            .push(save_btn);
+
+        let timer_heading = Text::new("Timer")
+            .width(Length::Fill)
+            .horizontal_alignment(alignment::Horizontal::Center)
+            .size(TEXT_SIZE_HEADING);
+
+        let stance_text = Row::new()
+            .width(Length::Fill)
+            .align_items(Alignment::Center)
+            .push(
+                Text::new("Current stance:")
+                    .width(Length::Fill)
+                    .horizontal_alignment(alignment::Horizontal::Left)
+                    .size(TEXT_SIZE_NORMAL),
+            )
+            .push(
+                Text::new(format!("{}", self.state.current_stance))
+                    .horizontal_alignment(alignment::Horizontal::Right)
+                    .size(TEXT_SIZE_NORMAL),
+            );
+
+        let timer_text = Row::new()
+            .width(Length::Fill)
+            .align_items(Alignment::Center)
+            .push(
+                Text::new("Next switch in [min]:")
+                    .width(Length::Fill)
+                    .horizontal_alignment(alignment::Horizontal::Left)
+                    .size(TEXT_SIZE_NORMAL),
+            )
+            .push(
+                Text::new("69")
+                    .horizontal_alignment(alignment::Horizontal::Right)
+                    .size(TEXT_SIZE_NORMAL),
+            );
+
+        let info_texts = Column::new()
+            .padding(COL_PADDING)
+            .spacing(COL_SPACING)
+            .width(Length::Fill)
+            .push(stance_text)
+            .push(timer_text);
 
         let btn_text;
         let btn_on_press;
@@ -280,30 +380,34 @@ impl<'a> Application for App {
         }
 
         let timer_btn = Column::new()
-            .padding(PADDING)
+            .padding(COL_PADDING)
             .align_items(Alignment::Center)
             .push(
                 Button::new(&mut self.state.timer_button, Text::new(btn_text))
-                    .padding(PADDING)
+                    .padding(BUTTON_PADDING)
                     .style(self.theme)
                     .on_press(btn_on_press),
             )
-            .push(Text::new(timer_state_text).size(TEXT_SIZE / 2));
+            .push(Text::new(timer_state_text).size(TEXT_SIZE_SMALL));
 
-        let content = Column::new()
-            .spacing(PADDING)
-            .padding(PADDING)
+        let timer_column = Column::new()
+            .padding(MAIN_COLUMNS_PADDING)
+            .spacing(MAIN_COLUMNS_SPACING)
+            .width(Length::Units(MAIN_COLUMNS_WIDTH))
             .align_items(Alignment::Center)
-            .push(sit_time)
-            .push(stand_time)
-            .push(Rule::horizontal(PADDING).style(self.theme))
-            .push(stance_switch)
-            .push(Rule::horizontal(PADDING).style(self.theme))
-            .push(toast_duration)
-            .push(Rule::horizontal(PADDING).style(self.theme))
-            .push(save_btn)
-            .push(Rule::horizontal(PADDING).style(self.theme))
+            .push(timer_heading)
+            .push(Rule::horizontal(HORIZONTAL_RULE_PADDING).style(self.theme))
+            .push(info_texts)
+            .push(Rule::horizontal(HORIZONTAL_RULE_PADDING).style(self.theme))
             .push(timer_btn);
+
+        let content = Row::new()
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .align_items(Alignment::Start)
+            .push(timer_column)
+            .push(Rule::vertical(VERTICAL_RULE_PADDING).style(self.theme))
+            .push(config_column);
 
         Container::new(content)
             .width(Length::Fill)

@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::fs::{self, File};
 use std::io::Write;
 
@@ -28,6 +29,15 @@ pub enum Stance {
 impl Default for Stance {
     fn default() -> Self {
         Self::Sitting
+    }
+}
+
+impl Display for Stance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Stance::Sitting => write!(f, "{}", "Sitting"),
+            Stance::Standing => write!(f, "{}", "Standing"),
+        }
     }
 }
 
