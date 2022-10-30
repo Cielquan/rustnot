@@ -35,6 +35,7 @@ struct State {
     timer_running: bool,
     current_stance: Stance,
     stance_switch_button: button::State,
+    timer_config_cache: config::Config,
 }
 
 impl Default for State {
@@ -49,6 +50,7 @@ impl Default for State {
             timer_running: false,
             current_stance: Stance::default(),
             stance_switch_button: button::State::default(),
+            timer_config_cache: config::Config::default(),
         }
     }
 }
@@ -89,8 +91,8 @@ impl<'a> Application for App {
         match message {
             Message::ConfigFileLoaded(res) => {
                 if let Ok(new_conf) = res {
+                    self.config = new_conf.clone();
                     self.state.current_stance = new_conf.start_stance;
-                    self.config = new_conf;
                     self.state.config_saved = true;
                 }
             }
@@ -135,20 +137,21 @@ impl<'a> Application for App {
             Message::StartTimer => {
                 self.state.timer_running = true;
                 *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Run;
-                self.state.current_stance = self.config.start_stance.clone();
+                self.state.timer_config_cache = self.config.clone();
+                self.state.current_stance = self.state.timer_config_cache.start_stance;
                 return Command::perform(async { true }, Message::StartTimerCycle);
             }
             Message::StartTimerCycle(is_init) => {
                 return Command::perform(
                     timer::run_cycle_timer(
-                        self.state.current_stance.clone(),
+                        self.state.current_stance,
                         if self.state.current_stance == Stance::Sitting {
-                            self.config.sit_time
+                            self.state.timer_config_cache.sit_time
                         } else {
-                            self.config.stand_time
+                            self.state.timer_config_cache.stand_time
                         },
                         is_init,
-                        self.config.toast_duration.clone(),
+                        self.state.timer_config_cache.toast_duration,
                     ),
                     Message::TimerCycleFinished,
                 );
