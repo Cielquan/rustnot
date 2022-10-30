@@ -2,12 +2,15 @@ use std::borrow::BorrowMut;
 
 use iced::{
     alignment, button, text_input, Alignment, Application, Button, Column, Command, Container,
-    Element, Length, Radio, Row, Rule, Text, TextInput,
+    Element, Length, Radio, Row, Rule, Subscription, Text, TextInput,
 };
 
 use crate::config::{self, Stance};
 use crate::timer::CycleResult;
 use crate::{style, timer};
+
+static ZERO_DURATION: std::time::Duration = std::time::Duration::from_secs(0);
+static ONE_MINUTE: std::time::Duration = std::time::Duration::from_secs(60);
 
 pub struct App {
     config: config::Config,
@@ -36,6 +39,8 @@ struct State {
     current_stance: Stance,
     stance_switch_button: button::State,
     timer_config_cache: config::Config,
+    timer_cycle_start_timestamp: std::time::Instant,
+    timer_cycle_remaining_time: std::time::Duration,
 }
 
 impl Default for State {
@@ -51,6 +56,8 @@ impl Default for State {
             current_stance: Stance::default(),
             stance_switch_button: button::State::default(),
             timer_config_cache: config::Config::default(),
+            timer_cycle_start_timestamp: std::time::Instant::now(),
+            timer_cycle_remaining_time: ZERO_DURATION,
         }
     }
 }
@@ -69,6 +76,7 @@ pub enum Message {
     StartTimerCycle(bool),
     TimerCycleFinished(timer::CycleResult),
     SwitchStance,
+    TimerClockTick(std::time::Instant),
 }
 
 impl<'a> Application for App {
@@ -142,6 +150,7 @@ impl<'a> Application for App {
                 return Command::perform(async { true }, Message::StartTimerCycle);
             }
             Message::StartTimerCycle(is_init) => {
+                self.state.timer_cycle_start_timestamp = std::time::Instant::now();
                 return Command::perform(
                     timer::run_cycle_timer(
                         self.state.current_stance,
@@ -156,22 +165,25 @@ impl<'a> Application for App {
                     Message::TimerCycleFinished,
                 );
             }
-            Message::TimerCycleFinished(res) => match res {
-                CycleResult::OK | CycleResult::Skipped => {
-                    if res == CycleResult::Skipped {
-                        *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Run;
+            Message::TimerCycleFinished(res) => {
+                self.state.timer_cycle_remaining_time = ZERO_DURATION;
+                match res {
+                    CycleResult::OK | CycleResult::Skipped => {
+                        if res == CycleResult::Skipped {
+                            *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Run;
+                        }
+                        match self.state.current_stance {
+                            Stance::Sitting => self.state.current_stance = Stance::Standing,
+                            Stance::Standing => self.state.current_stance = Stance::Sitting,
+                        };
+                        return Command::perform(async { false }, Message::StartTimerCycle);
                     }
-                    match self.state.current_stance {
-                        Stance::Sitting => self.state.current_stance = Stance::Standing,
-                        Stance::Standing => self.state.current_stance = Stance::Sitting,
-                    };
-                    return Command::perform(async { false }, Message::StartTimerCycle);
+                    CycleResult::Aborted => {
+                        self.state.timer_state = timer::TimerStage::Idle;
+                        self.state.current_stance = self.config.start_stance;
+                    }
                 }
-                CycleResult::Aborted => {
-                    self.state.timer_state = timer::TimerStage::Idle;
-                    self.state.current_stance = self.config.start_stance;
-                }
-            },
+            }
             Message::StopTimer => {
                 *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Abort;
             }
@@ -180,8 +192,39 @@ impl<'a> Application for App {
                     *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Skip;
                 }
             }
+            Message::TimerClockTick(now) => {
+                if self.state.timer_state == timer::TimerStage::Idle {
+                    self.state.timer_cycle_remaining_time = ZERO_DURATION;
+                    return Command::none();
+                }
+                let cycle_duration = match self.state.current_stance {
+                    Stance::Standing => std::time::Duration::from_secs(
+                        self.state.timer_config_cache.stand_time as u64 * 60,
+                    ),
+                    Stance::Sitting => std::time::Duration::from_secs(
+                        self.state.timer_config_cache.sit_time as u64 * 60,
+                    ),
+                };
+                self.state.timer_cycle_remaining_time = {
+                    let elapsed_time = now - self.state.timer_cycle_start_timestamp;
+                    if elapsed_time > cycle_duration {
+                        ONE_MINUTE
+                    } else {
+                        cycle_duration - elapsed_time + ONE_MINUTE
+                    }
+                };
+            }
         }
         Command::none()
+    }
+
+    fn subscription(&self) -> Subscription<Message> {
+        match self.state.timer_state {
+            timer::TimerStage::Idle => Subscription::none(),
+            timer::TimerStage::Running => {
+                iced::time::every(std::time::Duration::from_millis(10)).map(Message::TimerClockTick)
+            }
+        }
     }
 
     fn view(&mut self) -> Element<Message> {
@@ -398,9 +441,12 @@ impl<'a> Application for App {
                     .size(TEXT_SIZE_NORMAL),
             )
             .push(
-                Text::new("69")
-                    .horizontal_alignment(alignment::Horizontal::Right)
-                    .size(TEXT_SIZE_NORMAL),
+                Text::new(format!(
+                    "{:0}",
+                    self.state.timer_cycle_remaining_time.as_secs() / 60
+                ))
+                .horizontal_alignment(alignment::Horizontal::Right)
+                .size(TEXT_SIZE_NORMAL),
             );
 
         let info_texts = Column::new()
