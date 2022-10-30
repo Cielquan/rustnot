@@ -21,7 +21,7 @@ pub enum TimerSignal {
 }
 
 async fn sleeper(waiting_time: u64) {
-    tokio::time::sleep(tokio::time::Duration::from_secs(waiting_time)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(waiting_time * 60)).await;
 }
 
 async fn aborter() {
