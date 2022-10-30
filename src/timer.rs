@@ -8,6 +8,12 @@ lazy_static! {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TimerStage {
+    Idle,
+    Running,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TimerSignal {
     Run,
     Abort,

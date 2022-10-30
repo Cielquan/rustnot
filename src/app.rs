@@ -32,7 +32,7 @@ struct State {
     save_button: button::State,
     config_saved: bool,
     timer_button: button::State,
-    timer_running: bool,
+    timer_state: timer::TimerStage,
     current_stance: Stance,
     stance_switch_button: button::State,
     timer_config_cache: config::Config,
@@ -47,7 +47,7 @@ impl Default for State {
             save_button: button::State::default(),
             config_saved: false,
             timer_button: button::State::default(),
-            timer_running: false,
+            timer_state: timer::TimerStage::Idle,
             current_stance: Stance::default(),
             stance_switch_button: button::State::default(),
             timer_config_cache: config::Config::default(),
@@ -123,7 +123,7 @@ impl<'a> Application for App {
             }
             Message::ConfigValueStanceChanged(new_stance) => {
                 self.config.start_stance = new_stance;
-                if self.state.timer_running == false {
+                if self.state.timer_state == timer::TimerStage::Idle {
                     self.state.current_stance = new_stance;
                 }
                 self.state.config_saved = false;
@@ -135,7 +135,7 @@ impl<'a> Application for App {
                 }
             }
             Message::StartTimer => {
-                self.state.timer_running = true;
+                self.state.timer_state = timer::TimerStage::Running;
                 *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Run;
                 self.state.timer_config_cache = self.config.clone();
                 self.state.current_stance = self.state.timer_config_cache.start_stance;
@@ -168,7 +168,7 @@ impl<'a> Application for App {
                     return Command::perform(async { false }, Message::StartTimerCycle);
                 }
                 CycleResult::Aborted => {
-                    self.state.timer_running = false;
+                    self.state.timer_state = timer::TimerStage::Idle;
                     self.state.current_stance = self.config.start_stance;
                 }
             },
@@ -176,7 +176,7 @@ impl<'a> Application for App {
                 *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Abort;
             }
             Message::SwitchStance => {
-                if self.state.timer_running == true {
+                if self.state.timer_state == timer::TimerStage::Running {
                     *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Skip;
                 }
             }
@@ -352,7 +352,7 @@ impl<'a> Application for App {
             .size(TEXT_SIZE_HEADING);
 
         let timer_state_text_content;
-        if self.state.timer_running {
+        if self.state.timer_state == timer::TimerStage::Running {
             timer_state_text_content = "Running ...";
         } else {
             timer_state_text_content = "Stopped";
@@ -414,7 +414,7 @@ impl<'a> Application for App {
         let timer_controll_btn_text;
         let timer_controll_btn_on_press;
         let timer_controll_btn_style: style::Button;
-        if self.state.timer_running {
+        if self.state.timer_state == timer::TimerStage::Running {
             timer_controll_btn_text = "Stop Timer";
             timer_controll_btn_on_press = Message::StopTimer;
             timer_controll_btn_style = style::Button::Destructive;
