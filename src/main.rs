@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use iced::time::{self, Duration, Instant, milliseconds};
 use iced::widget::{button, column, row, text};
 use notify_rust::{Notification, Timeout};
@@ -13,7 +11,7 @@ pub fn main() -> iced::Result {
 #[derive(Debug, Default)]
 struct RustNot {
     settings: Settings,
-    timer_state: TimerState,
+    current_timer_cycle: Option<TimerCycleInfo>,
 }
 
 #[derive(Debug, Default)]
@@ -48,22 +46,6 @@ impl Stance {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-enum TimerState {
-    #[default]
-    Stopped,
-    Running(TimerCycleInfo),
-}
-
-impl Display for TimerState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TimerState::Stopped => write!(f, "{}", "Stopped"),
-            TimerState::Running(_) => write!(f, "{}", "Running"),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 struct TimerCycleInfo {
     start_time: Instant,
@@ -86,7 +68,7 @@ impl RustNot {
                 stand_duration_as_min: 2,
                 start_stance: Stance::default(),
             },
-            timer_state: TimerState::default(),
+            current_timer_cycle: None,
         }
     }
 
@@ -96,24 +78,24 @@ impl RustNot {
                 self.start_new_cycle();
             }
             Message::TimerStop => {
-                self.timer_state = TimerState::Stopped;
+                self.current_timer_cycle = None;
             }
-            Message::TimerTick => match &self.timer_state {
-                TimerState::Running(cycle_info) => {
+            Message::TimerTick => match &self.current_timer_cycle {
+                Some(cycle_info) => {
                     let run_duration = Instant::now() - cycle_info.start_time;
                     if run_duration >= cycle_info.duration {
                         self.start_new_cycle();
                     };
                 }
-                TimerState::Stopped => {}
+                None => {}
             },
         }
     }
 
     fn start_new_cycle(&mut self) {
-        match self.timer_state {
-            TimerState::Stopped => {
-                self.timer_state = TimerState::Running(TimerCycleInfo {
+        match self.current_timer_cycle {
+            None => {
+                self.current_timer_cycle = Some(TimerCycleInfo {
                     start_time: Instant::now(),
                     duration: Duration::from_mins(
                         self.settings
@@ -122,11 +104,11 @@ impl RustNot {
                     stace: self.settings.start_stance,
                 });
             }
-            TimerState::Running(cycle_info) => {
+            Some(cycle_info) => {
                 let new_cycle_stance = Stance::inverted(cycle_info.stace);
                 let new_cycle_duration =
                     Duration::from_mins(self.settings.get_duration_for_stance(&new_cycle_stance));
-                self.timer_state = TimerState::Running(TimerCycleInfo {
+                self.current_timer_cycle = Some(TimerCycleInfo {
                     start_time: Instant::now(),
                     duration: new_cycle_duration,
                     stace: new_cycle_stance,
@@ -150,9 +132,9 @@ impl RustNot {
     }
 
     fn subscription(&self) -> iced::Subscription<Message> {
-        let tick = match self.timer_state {
-            TimerState::Stopped => iced::Subscription::none(),
-            TimerState::Running(_) => time::every(milliseconds(100)).map(|_| Message::TimerTick),
+        let tick = match self.current_timer_cycle {
+            None => iced::Subscription::none(),
+            Some(_) => time::every(milliseconds(100)).map(|_| Message::TimerTick),
         };
 
         iced::Subscription::batch(vec![tick])
@@ -170,12 +152,16 @@ impl RustNot {
             ],
             row![
                 text("Timer status: "),
-                text(format!("{}", &self.timer_state)),
+                text(if self.current_timer_cycle.is_some() {
+                    "Running"
+                } else {
+                    "Stopped"
+                }),
             ],
             row![
                 text("Time till cycle end: "),
-                text(match &self.timer_state {
-                    TimerState::Running(cycle_info) => {
+                text(match &self.current_timer_cycle {
+                    Some(cycle_info) => {
                         const MINUTE: u64 = 60;
                         const HOUR: u64 = 60 * MINUTE;
 
@@ -192,15 +178,15 @@ impl RustNot {
                             displayed_duration_as_sec % MINUTE,
                         )
                     }
-                    TimerState::Stopped => "-".to_string(),
+                    None => "-".to_string(),
                 }),
             ],
-            match &self.timer_state {
-                TimerState::Running(_) => button(text("Stop").align_x(iced::Center))
+            match &self.current_timer_cycle {
+                Some(_) => button(text("Stop").align_x(iced::Center))
                     .on_press(Message::TimerStop)
                     .padding(10)
                     .width(80),
-                TimerState::Stopped => button(text("Start").align_x(iced::Center))
+                None => button(text("Start").align_x(iced::Center))
                     .on_press(Message::TimerStart)
                     .padding(10)
                     .width(80),
