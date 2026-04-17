@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use iced::time::{self, Duration, Instant, milliseconds};
-use iced::widget::{Column, button, column, row, text};
+use iced::widget::{button, column, row, text};
 
 pub fn main() -> iced::Result {
     iced::application(RustNot::new, RustNot::update, RustNot::view)
@@ -9,11 +9,42 @@ pub fn main() -> iced::Result {
         .run()
 }
 
-const CYCLE_DURATION_AS_MIN: u64 = 1;
-
 #[derive(Debug, Default)]
 struct RustNot {
+    settings: Settings,
     timer_state: TimerState,
+}
+
+#[derive(Debug, Default)]
+struct Settings {
+    sit_duration_as_min: u64,
+    stand_duration_as_min: u64,
+    start_stance: Stance,
+}
+
+impl Settings {
+    fn get_duration_for_stance(&self, stance: &Stance) -> u64 {
+        match stance {
+            Stance::Sitting => self.sit_duration_as_min,
+            Stance::Standing => self.stand_duration_as_min,
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+enum Stance {
+    #[default]
+    Sitting,
+    Standing,
+}
+
+impl Stance {
+    fn inverted(current: Stance) -> Self {
+        match current {
+            Stance::Sitting => Stance::Standing,
+            Stance::Standing => Stance::Sitting,
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -36,6 +67,7 @@ impl Display for TimerState {
 struct TimerCycleInfo {
     start_time: Instant,
     duration: Duration,
+    stace: Stance,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -48,6 +80,11 @@ enum Message {
 impl RustNot {
     fn new() -> Self {
         Self {
+            settings: Settings {
+                sit_duration_as_min: 1,
+                stand_duration_as_min: 2,
+                start_stance: Stance::default(),
+            },
             timer_state: TimerState::default(),
         }
     }
@@ -73,10 +110,28 @@ impl RustNot {
     }
 
     fn start_new_cycle(&mut self) {
-        self.timer_state = TimerState::Running(TimerCycleInfo {
-            start_time: Instant::now(),
-            duration: Duration::from_mins(CYCLE_DURATION_AS_MIN),
-        });
+        match self.timer_state {
+            TimerState::Stopped => {
+                self.timer_state = TimerState::Running(TimerCycleInfo {
+                    start_time: Instant::now(),
+                    duration: Duration::from_mins(
+                        self.settings
+                            .get_duration_for_stance(&self.settings.start_stance),
+                    ),
+                    stace: self.settings.start_stance,
+                });
+            }
+            TimerState::Running(cycle_info) => {
+                let new_cycle_stance = Stance::inverted(cycle_info.stace);
+                self.timer_state = TimerState::Running(TimerCycleInfo {
+                    start_time: Instant::now(),
+                    duration: Duration::from_mins(
+                        self.settings.get_duration_for_stance(&new_cycle_stance),
+                    ),
+                    stace: new_cycle_stance,
+                });
+            }
+        }
     }
 
     fn subscription(&self) -> iced::Subscription<Message> {
@@ -88,8 +143,16 @@ impl RustNot {
         iced::Subscription::batch(vec![tick])
     }
 
-    fn view(&self) -> Column<'_, Message> {
+    fn view(&self) -> iced::Element<'_, Message> {
         column![
+            row![
+                text("Sit duration [min]: "),
+                text(&self.settings.sit_duration_as_min),
+            ],
+            row![
+                text("Stand duration [min]: "),
+                text(&self.settings.stand_duration_as_min),
+            ],
             row![
                 text("Timer status: "),
                 text(format!("{}", &self.timer_state)),
@@ -128,5 +191,6 @@ impl RustNot {
                     .width(80),
             },
         ]
+        .into()
     }
 }
