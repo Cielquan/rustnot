@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use iced::time::{self, Duration, Instant, milliseconds};
 use iced::widget::{button, column, row, text};
+use notify_rust::{Notification, Timeout};
 
 pub fn main() -> iced::Result {
     iced::application(RustNot::new, RustNot::update, RustNot::view)
@@ -123,13 +124,27 @@ impl RustNot {
             }
             TimerState::Running(cycle_info) => {
                 let new_cycle_stance = Stance::inverted(cycle_info.stace);
+                let new_cycle_duration =
+                    Duration::from_mins(self.settings.get_duration_for_stance(&new_cycle_stance));
                 self.timer_state = TimerState::Running(TimerCycleInfo {
                     start_time: Instant::now(),
-                    duration: Duration::from_mins(
-                        self.settings.get_duration_for_stance(&new_cycle_stance),
-                    ),
+                    duration: new_cycle_duration,
                     stace: new_cycle_stance,
                 });
+
+                Notification::new()
+                    .summary(match new_cycle_stance {
+                        Stance::Sitting => "Please sit Down.",
+                        Stance::Standing => "Please stand up.",
+                    })
+                    .body(&format!(
+                        "It's time to change your stance.\nNext reminder in: {} min.",
+                        new_cycle_duration.as_secs() / 60
+                    ))
+                    .sound_name("dialog-information")
+                    .timeout(Timeout::Milliseconds(10 * 1000))
+                    .show()
+                    .expect("unable to toast");
             }
         }
     }
