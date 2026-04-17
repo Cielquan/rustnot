@@ -80,15 +80,14 @@ impl RustNot {
             Message::TimerStop => {
                 self.current_timer_cycle = None;
             }
-            Message::TimerTick => match &self.current_timer_cycle {
-                Some(cycle_info) => {
+            Message::TimerTick => {
+                if let Some(cycle_info) = &self.current_timer_cycle {
                     let run_duration = Instant::now() - cycle_info.start_time;
                     if run_duration >= cycle_info.duration {
                         self.start_new_cycle();
                     };
                 }
-                None => {}
-            },
+            }
         }
     }
 
