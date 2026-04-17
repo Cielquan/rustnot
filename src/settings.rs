@@ -1,0 +1,31 @@
+#[derive(Debug, Default)]
+pub struct Settings {
+    pub sit_duration_as_min: u64,
+    pub stand_duration_as_min: u64,
+    pub start_stance: Stance,
+}
+
+impl Settings {
+    pub fn get_duration_for_stance(&self, stance: &Stance) -> u64 {
+        match stance {
+            Stance::Sitting => self.sit_duration_as_min,
+            Stance::Standing => self.stand_duration_as_min,
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub enum Stance {
+    #[default]
+    Sitting,
+    Standing,
+}
+
+impl Stance {
+    pub fn inverted(current: Stance) -> Self {
+        match current {
+            Stance::Sitting => Stance::Standing,
+            Stance::Standing => Stance::Sitting,
+        }
+    }
+}

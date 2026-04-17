@@ -2,6 +2,9 @@ use iced::time::{self, Duration, Instant, milliseconds};
 use iced::widget::{button, column, row, text};
 use notify_rust::{Notification, Timeout};
 
+mod settings;
+use settings::{Settings, Stance};
+
 pub fn main() -> iced::Result {
     iced::application(RustNot::new, RustNot::update, RustNot::view)
         .subscription(RustNot::subscription)
@@ -12,38 +15,6 @@ pub fn main() -> iced::Result {
 struct RustNot {
     settings: Settings,
     current_timer_cycle: Option<TimerCycleInfo>,
-}
-
-#[derive(Debug, Default)]
-struct Settings {
-    sit_duration_as_min: u64,
-    stand_duration_as_min: u64,
-    start_stance: Stance,
-}
-
-impl Settings {
-    fn get_duration_for_stance(&self, stance: &Stance) -> u64 {
-        match stance {
-            Stance::Sitting => self.sit_duration_as_min,
-            Stance::Standing => self.stand_duration_as_min,
-        }
-    }
-}
-
-#[derive(Debug, Default, Clone, Copy)]
-enum Stance {
-    #[default]
-    Sitting,
-    Standing,
-}
-
-impl Stance {
-    fn inverted(current: Stance) -> Self {
-        match current {
-            Stance::Sitting => Stance::Standing,
-            Stance::Standing => Stance::Sitting,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy)]
