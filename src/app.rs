@@ -244,7 +244,7 @@ impl App {
             .on_press(Message::ThemeChanged(Some(iced::Theme::Dark))),
         };
 
-        let top_button_bar = row![space().width(iced::Length::Fill), theme_toggle_btn,]
+        let top_button_bar = row![space::horizontal(), theme_toggle_btn,]
             .width(iced::Length::Fill)
             .padding(iced::Padding {
                 top: style::OUTER_PADDING as f32,
@@ -260,15 +260,11 @@ impl App {
             rule::horizontal(style::HORIZONTAL_RULE_HEIGHT),
             info_texts,
             rule::horizontal(style::HORIZONTAL_RULE_HEIGHT),
-            row![
-                timer_control_btn,
-                space().width(iced::Length::Fill),
-                stance_switch_btn
-            ]
-            .width(iced::Length::Fill)
-            .padding(style::ROW_PADDING)
-            .spacing(style::ROW_SPACING)
-            .align_y(iced::Alignment::Center),
+            row![timer_control_btn, space::horizontal(), stance_switch_btn]
+                .width(iced::Length::Fill)
+                .padding(style::ROW_PADDING)
+                .spacing(style::ROW_SPACING)
+                .align_y(iced::Alignment::Center),
         ]
         .padding(iced::Padding {
             top: 0.0,
