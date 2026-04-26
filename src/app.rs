@@ -192,10 +192,10 @@ impl App {
         .spacing(style::COL_SPACING);
 
         let timer_control_btn = (match &self.current_timer_cycle {
-            Some(_) => {
-                button(text("Stop timer").align_x(iced::Center)).on_press(Message::TimerStop)
-            }
             None => button(text("Start timer").align_x(iced::Center)).on_press(Message::TimerStart),
+            Some(_) => button(text("Stop timer").align_x(iced::Center))
+                .style(button::danger)
+                .on_press(Message::TimerStop),
         })
         .padding(style::BUTTON_PADDING)
         .width(105);
