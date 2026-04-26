@@ -64,45 +64,6 @@ impl App {
         }
     }
 
-    fn start_new_cycle(&mut self) {
-        match self.current_timer_cycle {
-            None => {
-                self.current_timer_cycle = Some(TimerCycleInfo {
-                    start_time: Instant::now(),
-                    duration: Duration::from_mins(
-                        self.settings
-                            .get_duration_for_stance(&self.settings.start_stance),
-                    ),
-                    stace: self.settings.start_stance,
-                });
-            }
-            Some(cycle_info) => {
-                let new_cycle_stance = Stance::inverted(cycle_info.stace);
-                let new_cycle_duration =
-                    Duration::from_mins(self.settings.get_duration_for_stance(&new_cycle_stance));
-                self.current_timer_cycle = Some(TimerCycleInfo {
-                    start_time: Instant::now(),
-                    duration: new_cycle_duration,
-                    stace: new_cycle_stance,
-                });
-
-                Notification::new()
-                    .summary(match new_cycle_stance {
-                        Stance::Sitting => "Please sit Down.",
-                        Stance::Standing => "Please stand up.",
-                    })
-                    .body(&format!(
-                        "It's time to change your stance.\nNext reminder in: {} min.",
-                        new_cycle_duration.as_secs() / 60
-                    ))
-                    .sound_name("dialog-information")
-                    .timeout(Timeout::Milliseconds(10 * 1000))
-                    .show()
-                    .expect("unable to toast");
-            }
-        }
-    }
-
     pub fn subscription(&self) -> iced::Subscription<Message> {
         let tick = match self.current_timer_cycle {
             None => iced::Subscription::none(),
@@ -283,5 +244,46 @@ impl App {
 
     pub fn theme(&self) -> Option<iced::Theme> {
         self.theme.clone()
+    }
+}
+
+impl App {
+    fn start_new_cycle(&mut self) {
+        match self.current_timer_cycle {
+            None => {
+                self.current_timer_cycle = Some(TimerCycleInfo {
+                    start_time: Instant::now(),
+                    duration: Duration::from_mins(
+                        self.settings
+                            .get_duration_for_stance(&self.settings.start_stance),
+                    ),
+                    stace: self.settings.start_stance,
+                });
+            }
+            Some(cycle_info) => {
+                let new_cycle_stance = Stance::inverted(cycle_info.stace);
+                let new_cycle_duration =
+                    Duration::from_mins(self.settings.get_duration_for_stance(&new_cycle_stance));
+                self.current_timer_cycle = Some(TimerCycleInfo {
+                    start_time: Instant::now(),
+                    duration: new_cycle_duration,
+                    stace: new_cycle_stance,
+                });
+
+                Notification::new()
+                    .summary(match new_cycle_stance {
+                        Stance::Sitting => "Please sit Down.",
+                        Stance::Standing => "Please stand up.",
+                    })
+                    .body(&format!(
+                        "It's time to change your stance.\nNext reminder in: {} min.",
+                        new_cycle_duration.as_secs() / 60
+                    ))
+                    .sound_name("dialog-information")
+                    .timeout(Timeout::Milliseconds(10 * 1000))
+                    .show()
+                    .expect("unable to toast");
+            }
+        }
     }
 }
