@@ -2,7 +2,7 @@ use crate::settings::{Settings, Stance};
 use crate::style;
 
 use iced::time::{self, Duration, Instant, milliseconds};
-use iced::widget::{button, column, container, row, rule, text};
+use iced::widget::{button, column, row, rule, space, text};
 use notify_rust::{Notification, Timeout};
 
 #[derive(Debug, Default)]
@@ -215,7 +215,7 @@ impl App {
             rule::horizontal(style::HORIZONTAL_RULE_HEIGHT),
             row![
                 timer_control_btn,
-                container("").width(iced::Length::Fill),
+                space().width(iced::Length::Fill),
                 stance_switch_btn
             ]
             .width(iced::Length::Fill)
