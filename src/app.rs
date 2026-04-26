@@ -157,7 +157,7 @@ impl App {
         pub const TEXT_SIZE_HEADING: u32 = 45;
         pub const TEXT_SIZE_NORMAL: u32 = 25;
 
-        let main_heading = text("rustnot")
+        let main_heading = text("RustNot")
             .width(iced::Length::Fill)
             .align_x(iced::Alignment::Center)
             .size(TEXT_SIZE_HEADING);
