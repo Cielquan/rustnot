@@ -2,7 +2,7 @@ use crate::settings::{Settings, Stance};
 use crate::style;
 
 use iced::time::{self, Duration, Instant, milliseconds};
-use iced::widget::{button, column, row, rule, text};
+use iced::widget::{button, column, container, row, rule, text};
 use notify_rust::{Notification, Timeout};
 
 #[derive(Debug, Default)]
@@ -23,6 +23,7 @@ pub enum Message {
     TimerStart,
     TimerStop,
     TimerTick,
+    ManualTimerCycleEnd,
 }
 
 impl App {
@@ -52,6 +53,9 @@ impl App {
                         self.start_new_cycle();
                     };
                 }
+            }
+            Message::ManualTimerCycleEnd => {
+                self.start_new_cycle();
             }
         }
     }
@@ -196,12 +200,28 @@ impl App {
         .padding(style::BUTTON_PADDING)
         .width(105);
 
+        let stance_switch_btn = button(text("Switch stance now").align_x(iced::Center))
+            .on_press_maybe(if self.current_timer_cycle.is_some() {
+                Some(Message::ManualTimerCycleEnd)
+            } else {
+                None
+            })
+            .padding(style::BUTTON_PADDING);
+
         column![
             main_heading,
             rule::horizontal(style::HORIZONTAL_RULE_HEIGHT),
             info_texts,
             rule::horizontal(style::HORIZONTAL_RULE_HEIGHT),
-            timer_control_btn,
+            row![
+                timer_control_btn,
+                container("").width(iced::Length::Fill),
+                stance_switch_btn
+            ]
+            .width(iced::Length::Fill)
+            .padding(style::ROW_PADDING)
+            .spacing(style::ROW_SPACING)
+            .align_y(iced::Alignment::Center),
         ]
         .padding(style::MAIN_COLUMN_PADDING)
         .spacing(style::MAIN_COLUMN_SPACING)
