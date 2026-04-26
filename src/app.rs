@@ -1,5 +1,6 @@
 use crate::settings::{Settings, Stance};
 
+use iced::Element;
 use iced::keyboard::{self, key};
 use iced::time::{self, Duration, Instant, milliseconds};
 use iced::widget::{
@@ -335,62 +336,71 @@ impl App {
                     column![
                         row![
                             text("Sit time [min]:").size(TEXT_SIZE_NORMAL),
+                            space::horizontal(),
                             iced_aw::number_input(
                                 &self.settings_modal_fields.sit_duration_as_min,
                                 0..=1440,
                                 Message::SettingSitTimeChanged
                             )
+                            .width(75)
                             .step(1)
                             .on_input(Message::SettingSitTimeChanged)
                             .on_submit(Message::SettingsSaveAndModalHide),
-                        ],
+                        ]
+                        .align_y(iced::Alignment::Center),
                         row![
                             text("Stand time [min]:").size(TEXT_SIZE_NORMAL),
+                            space::horizontal(),
                             iced_aw::number_input(
                                 &self.settings_modal_fields.stand_duration_as_min,
                                 0..=1440,
                                 Message::SettingStandTimeChanged
                             )
+                            .width(75)
                             .step(1)
                             .on_input(Message::SettingStandTimeChanged)
                             .on_submit(Message::SettingsSaveAndModalHide),
-                        ],
+                        ]
+                        .align_y(iced::Alignment::Center),
                         column![
-                            text("Choose start stance:"),
+                            text("Start stance:").size(TEXT_SIZE_NORMAL),
                             radio(
                                 "Sitting",
                                 Stance::Sitting,
                                 Some(self.settings_modal_fields.start_stance),
                                 Message::SettingStartStanceChanged
-                            ),
+                            )
+                            .size(TEXT_SIZE_NORMAL),
                             radio(
                                 "Standing",
                                 Stance::Standing,
                                 Some(self.settings_modal_fields.start_stance),
                                 Message::SettingStartStanceChanged
-                            ),
-                        ],
-                        rule::horizontal(HORIZONTAL_RULE_HEIGHT),
-                        row![
-                            button(text("Save"))
-                                .style(button::success)
-                                .on_press(Message::SettingsSaveAndModalHide),
-                            space::horizontal(),
-                            button(text("Cancel"))
-                                .style(button::danger)
-                                .on_press(Message::SettingsModalHide),
+                            )
+                            .size(TEXT_SIZE_NORMAL),
                         ]
-                        .width(iced::Length::Fill)
-                        .padding(ROW_PADDING)
-                        .spacing(ROW_SPACING)
-                        .align_y(iced::Alignment::Center),
+                        .spacing(5),
                     ]
-                    .spacing(10)
+                    .spacing(10),
+                    rule::horizontal(HORIZONTAL_RULE_HEIGHT),
+                    row![
+                        button(text("Save"))
+                            .style(button::success)
+                            .on_press(Message::SettingsSaveAndModalHide),
+                        space::horizontal(),
+                        button(text("Cancel"))
+                            .style(button::danger)
+                            .on_press(Message::SettingsModalHide),
+                    ]
+                    .width(iced::Length::Fill)
+                    .padding([0, ROW_PADDING])
+                    .spacing(ROW_SPACING)
+                    .align_y(iced::Alignment::Center),
                 ]
                 .spacing(20),
             )
-            .width(300)
-            .padding(10)
+            .width(350)
+            .padding(OUTER_PADDING)
             .style(container::rounded_box)
             .into();
 
