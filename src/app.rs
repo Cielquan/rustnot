@@ -160,8 +160,46 @@ impl App {
 
         let main_heading = text("RustNot")
             .width(iced::Length::Fill)
-            .align_x(iced::Alignment::Center)
+            .align_x(iced::Alignment::Start)
             .size(TEXT_SIZE_HEADING);
+
+        let create_icon_btn = |file_path: &str| {
+            button(svg(file_path).content_fit(iced::ContentFit::Contain).style(
+                |theme: &iced::Theme, _style| svg::Style {
+                    color: Some(theme.palette().text),
+                },
+            ))
+            .width(iced::Length::Shrink)
+            .height(iced::Length::Shrink)
+            .padding(7)
+            .style(button::background)
+        };
+
+        let theme_toggle_btn = match self.theme {
+            Some(iced::Theme::Dark) => create_icon_btn(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/resources/images/sun.svg"
+            ))
+            .on_press(Message::ThemeChanged(Some(iced::Theme::Light))),
+
+            Some(iced::Theme::Light) => create_icon_btn(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/resources/images/sun-moon.svg"
+            ))
+            .on_press(Message::ThemeChanged(None)),
+
+            None | _ => create_icon_btn(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/resources/images/moon.svg"
+            ))
+            .on_press(Message::ThemeChanged(Some(iced::Theme::Dark))),
+        };
+
+        let settings_btn = create_icon_btn(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/resources/images/settings.svg"
+        ))
+        .on_press(Message::SettingsModalShow);
 
         let sit_duration = row![
             text("Sit time [min]:")
@@ -257,57 +295,15 @@ impl App {
             })
             .padding(BUTTON_PADDING);
 
-        let create_icon_btn = |file_path: &str| {
-            button(svg(file_path).content_fit(iced::ContentFit::Contain).style(
-                |theme: &iced::Theme, _style| svg::Style {
-                    color: Some(theme.palette().text),
-                },
-            ))
-            .width(iced::Length::Shrink)
-            .height(iced::Length::Shrink)
-            .padding(7)
-            .style(button::background)
-        };
-
-        let theme_toggle_btn = match self.theme {
-            Some(iced::Theme::Dark) => create_icon_btn(concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/resources/images/sun.svg"
-            ))
-            .on_press(Message::ThemeChanged(Some(iced::Theme::Light))),
-
-            Some(iced::Theme::Light) => create_icon_btn(concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/resources/images/sun-moon.svg"
-            ))
-            .on_press(Message::ThemeChanged(None)),
-
-            None | _ => create_icon_btn(concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/resources/images/moon.svg"
-            ))
-            .on_press(Message::ThemeChanged(Some(iced::Theme::Dark))),
-        };
-
-        let settings_btn = create_icon_btn(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/resources/images/settings.svg"
-        ))
-        .on_press(Message::SettingsModalShow);
-
-        let top_button_bar = row![space::horizontal(), theme_toggle_btn, settings_btn]
-            .width(iced::Length::Fill)
-            .padding(iced::Padding {
-                top: OUTER_PADDING as f32,
-                right: OUTER_PADDING as f32,
-                left: OUTER_PADDING as f32,
-                bottom: 0.0,
-            })
+        let main_content: Element<'_, Message> = column![
+            row![
+                main_heading,
+                space::horizontal(),
+                theme_toggle_btn,
+                settings_btn
+            ]
             .spacing(ROW_SPACING)
-            .align_y(iced::Alignment::Center);
-
-        let main_content = column![
-            main_heading,
+            .align_y(iced::Alignment::Start),
             rule::horizontal(HORIZONTAL_RULE_HEIGHT),
             info_texts,
             rule::horizontal(HORIZONTAL_RULE_HEIGHT),
@@ -317,16 +313,10 @@ impl App {
                 .spacing(ROW_SPACING)
                 .align_y(iced::Alignment::Center),
         ]
-        .padding(iced::Padding {
-            top: 0.0,
-            right: OUTER_PADDING as f32,
-            left: OUTER_PADDING as f32,
-            bottom: OUTER_PADDING as f32,
-        })
+        .padding(OUTER_PADDING)
         .spacing(MAIN_COLUMN_SPACING)
-        .align_x(iced::Alignment::Center);
-
-        let main_content = container(column![top_button_bar, main_content].padding(0).spacing(0));
+        .align_x(iced::Alignment::Center)
+        .into();
 
         if self.settings_modal_show {
             let modal_content: Element<'_, Message> = container(
@@ -406,7 +396,7 @@ impl App {
 
             modal(main_content, modal_content, Message::SettingsModalHide)
         } else {
-            main_content.into()
+            main_content.explain(iced::Color::BLACK)
         }
     }
 
