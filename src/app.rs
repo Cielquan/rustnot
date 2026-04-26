@@ -1,7 +1,8 @@
 use crate::settings::{Settings, Stance};
+use crate::style;
 
 use iced::time::{self, Duration, Instant, milliseconds};
-use iced::widget::{button, column, row, text};
+use iced::widget::{button, column, row, rule, text};
 use notify_rust::{Notification, Timeout};
 
 #[derive(Debug, Default)]
@@ -104,57 +105,111 @@ impl App {
     }
 
     pub fn view(&self) -> iced::Element<'_, Message> {
-        column![
-            row![
-                text("Sit duration [min]: "),
-                text(&self.settings.sit_duration_as_min),
-            ],
-            row![
-                text("Stand duration [min]: "),
-                text(&self.settings.stand_duration_as_min),
-            ],
-            row![
-                text("Timer status: "),
-                text(if self.current_timer_cycle.is_some() {
-                    "Running"
-                } else {
-                    "Stopped"
-                }),
-            ],
-            row![
-                text("Time till cycle end: "),
-                text(match &self.current_timer_cycle {
-                    Some(cycle_info) => {
-                        const MINUTE: u64 = 60;
-                        const HOUR: u64 = 60 * MINUTE;
+        let main_heading = text("rustnot")
+            .width(iced::Length::Fill)
+            .align_x(iced::Alignment::Center)
+            .size(style::TEXT_SIZE_HEADING);
 
-                        let run_duration = Instant::now() - cycle_info.start_time;
-                        let displayed_duration_as_sec = if run_duration < cycle_info.duration {
-                            (cycle_info.duration - run_duration).as_secs()
-                        } else {
-                            0
-                        };
-                        format!(
-                            "{:0>2}:{:0>2}:{:0>2}",
-                            displayed_duration_as_sec / HOUR,
-                            (displayed_duration_as_sec % HOUR) / MINUTE,
-                            displayed_duration_as_sec % MINUTE,
-                        )
-                    }
-                    None => "-".to_string(),
-                }),
-            ],
-            match &self.current_timer_cycle {
-                Some(_) => button(text("Stop").align_x(iced::Center))
-                    .on_press(Message::TimerStop)
-                    .padding(10)
-                    .width(80),
-                None => button(text("Start").align_x(iced::Center))
-                    .on_press(Message::TimerStart)
-                    .padding(10)
-                    .width(80),
-            },
+        let sit_duration = row![
+            text("Sit time [min]:")
+                .width(iced::Length::Fill)
+                .align_x(iced::Alignment::Start)
+                .size(style::TEXT_SIZE_NORMAL),
+            text!("{}", &self.settings.sit_duration_as_min)
+                .align_x(iced::Alignment::End)
+                .size(style::TEXT_SIZE_NORMAL),
+        ];
+
+        let stand_duration = row![
+            text("Stand time [min]:")
+                .width(iced::Length::Fill)
+                .align_x(iced::Alignment::Start)
+                .size(style::TEXT_SIZE_NORMAL),
+            text!("{}", &self.settings.stand_duration_as_min)
+                .align_x(iced::Alignment::End)
+                .size(style::TEXT_SIZE_NORMAL),
+        ];
+
+        let current_stance_info = row![
+            text("Current stance:")
+                .width(iced::Length::Fill)
+                .align_x(iced::Alignment::Start)
+                .size(style::TEXT_SIZE_NORMAL),
+            text(
+                match if let Some(current_cycle) = &self.current_timer_cycle {
+                    &current_cycle.stace
+                } else {
+                    &self.settings.start_stance
+                } {
+                    Stance::Sitting => "Sitting",
+                    Stance::Standing => "Standing",
+                },
+            )
+            .align_x(iced::Alignment::End)
+            .size(style::TEXT_SIZE_NORMAL)
+        ];
+
+        let next_stance_switch_info = row![
+            text("Next cycle in:")
+                .width(iced::Length::Fill)
+                .align_x(iced::Alignment::Start)
+                .size(style::TEXT_SIZE_NORMAL),
+            text(match &self.current_timer_cycle {
+                Some(cycle_info) => {
+                    const MINUTE: u64 = 60;
+                    const HOUR: u64 = 60 * MINUTE;
+
+                    let run_duration = Instant::now() - cycle_info.start_time;
+                    let displayed_duration_as_sec = if run_duration < cycle_info.duration {
+                        (cycle_info.duration - run_duration).as_secs()
+                    } else {
+                        0
+                    };
+                    format!(
+                        "{:0>2}:{:0>2}:{:0>2}",
+                        displayed_duration_as_sec / HOUR,
+                        (displayed_duration_as_sec % HOUR) / MINUTE,
+                        displayed_duration_as_sec % MINUTE,
+                    )
+                }
+                None => "-".to_string(),
+            })
+            .align_x(iced::Alignment::End)
+            .size(style::TEXT_SIZE_NORMAL)
+        ];
+
+        let info_texts = column![
+            sit_duration,
+            stand_duration,
+            current_stance_info,
+            next_stance_switch_info,
         ]
+        .padding(style::COL_PADDING)
+        .spacing(style::COL_SPACING);
+
+        let timer_control_btn = (match &self.current_timer_cycle {
+            Some(_) => {
+                button(text("Stop timer").align_x(iced::Center)).on_press(Message::TimerStop)
+            }
+            None => button(text("Start timer").align_x(iced::Center)).on_press(Message::TimerStart),
+        })
+        .padding(style::BUTTON_PADDING)
+        .width(105);
+
+        column![
+            main_heading,
+            rule::horizontal(style::HORIZONTAL_RULE_HEIGHT),
+            info_texts,
+            rule::horizontal(style::HORIZONTAL_RULE_HEIGHT),
+            timer_control_btn,
+        ]
+        .padding(style::MAIN_COLUMN_PADDING)
+        .spacing(style::MAIN_COLUMN_SPACING)
+        .align_x(iced::Alignment::Center)
         .into()
+    }
+
+    pub fn theme(&self) -> iced::Theme {
+        iced::Theme::Dark
     }
 }
