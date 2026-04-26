@@ -1,12 +1,18 @@
 use crate::settings::{Settings, Stance};
 
 use iced::time::{self, Duration, Instant, milliseconds};
-use iced::widget::{button, column, row, rule, space, svg, text};
+use iced::widget::{
+    button, center, column, container, mouse_area, opaque, operation, radio, row, rule, space,
+    stack, svg, text,
+};
+use iced_aw;
 use notify_rust::{Notification, Timeout};
 
 #[derive(Debug, Default)]
 pub struct App {
     theme: Option<iced::Theme>,
+    settings_modal_show: bool,
+    settings_modal_fields: Settings,
     settings: Settings,
     current_timer_cycle: Option<TimerCycleInfo>,
 }
@@ -25,28 +31,42 @@ pub enum Message {
     TimerTick,
     ManualTimerCycleEnd,
     ThemeChanged(Option<iced::Theme>),
+    SettingsModalShow,
+    SettingsModalHide,
+    SettingsSaveAndModalHide,
+    SettingSitTimeChanged(u64),
+    SettingStandTimeChanged(u64),
+    SettingStartStanceChanged(Stance),
 }
 
 impl App {
     pub fn new() -> Self {
         Self {
             theme: None,
+            settings_modal_show: false,
             settings: Settings {
-                sit_duration_as_min: 1,
-                stand_duration_as_min: 2,
+                sit_duration_as_min: 45,
+                stand_duration_as_min: 20,
+                start_stance: Stance::default(),
+            },
+            settings_modal_fields: Settings {
+                sit_duration_as_min: 45,
+                stand_duration_as_min: 20,
                 start_stance: Stance::default(),
             },
             current_timer_cycle: None,
         }
     }
 
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> iced::Task<Message> {
         match message {
             Message::TimerStart => {
                 self.start_new_cycle();
+                iced::Task::none()
             }
             Message::TimerStop => {
                 self.current_timer_cycle = None;
+                iced::Task::none()
             }
             Message::TimerTick => {
                 if let Some(cycle_info) = &self.current_timer_cycle {
@@ -54,12 +74,46 @@ impl App {
                     if run_duration >= cycle_info.duration {
                         self.start_new_cycle();
                     };
-                }
+                };
+                iced::Task::none()
             }
             Message::ManualTimerCycleEnd => {
                 self.start_new_cycle();
+                iced::Task::none()
             }
-            Message::ThemeChanged(new_theme) => self.theme = new_theme,
+            Message::ThemeChanged(new_theme) => {
+                self.theme = new_theme;
+                iced::Task::none()
+            }
+            Message::SettingsModalShow => {
+                self.settings_modal_show = true;
+                self.reset_modal_fields();
+                operation::focus_next()
+            }
+            Message::SettingsModalHide => {
+                self.hide_modal();
+                iced::Task::none()
+            }
+            Message::SettingSitTimeChanged(new_sit_time) => {
+                self.settings_modal_fields.sit_duration_as_min = new_sit_time;
+                iced::Task::none()
+            }
+            Message::SettingStandTimeChanged(new_stand_time) => {
+                self.settings_modal_fields.stand_duration_as_min = new_stand_time;
+                iced::Task::none()
+            }
+            Message::SettingStartStanceChanged(new_start_stance) => {
+                self.settings_modal_fields.start_stance = new_start_stance;
+                iced::Task::none()
+            }
+            Message::SettingsSaveAndModalHide => {
+                self.settings.sit_duration_as_min = self.settings_modal_fields.sit_duration_as_min;
+                self.settings.stand_duration_as_min =
+                    self.settings_modal_fields.stand_duration_as_min;
+                self.settings.start_stance = self.settings_modal_fields.start_stance;
+                self.hide_modal();
+                iced::Task::none()
+            }
         }
     }
 
@@ -220,7 +274,13 @@ impl App {
             .on_press(Message::ThemeChanged(Some(iced::Theme::Dark))),
         };
 
-        let top_button_bar = row![space::horizontal(), theme_toggle_btn,]
+        let settings_btn = create_icon_btn(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/resources/images/settings.svg"
+        ))
+        .on_press(Message::SettingsModalShow);
+
+        let top_button_bar = row![space::horizontal(), theme_toggle_btn, settings_btn]
             .width(iced::Length::Fill)
             .padding(iced::Padding {
                 top: OUTER_PADDING as f32,
@@ -251,10 +311,78 @@ impl App {
         .spacing(MAIN_COLUMN_SPACING)
         .align_x(iced::Alignment::Center);
 
-        column![top_button_bar, main_content]
-            .padding(0)
-            .spacing(0)
-            .into()
+        let main_content = container(column![top_button_bar, main_content].padding(0).spacing(0));
+
+        if self.settings_modal_show {
+            let modal_content = container(
+                column![
+                    text("Settings").size(TEXT_SIZE_HEADING),
+                    rule::horizontal(HORIZONTAL_RULE_HEIGHT),
+                    column![
+                        row![
+                            text("Sit time [min]:").size(TEXT_SIZE_NORMAL),
+                            iced_aw::number_input(
+                                &self.settings_modal_fields.sit_duration_as_min,
+                                0..=1440,
+                                Message::SettingSitTimeChanged
+                            )
+                            .step(1)
+                            .on_input(Message::SettingSitTimeChanged)
+                            .on_submit(Message::SettingsSaveAndModalHide),
+                        ],
+                        row![
+                            text("Stand time [min]:").size(TEXT_SIZE_NORMAL),
+                            iced_aw::number_input(
+                                &self.settings_modal_fields.stand_duration_as_min,
+                                0..=1440,
+                                Message::SettingStandTimeChanged
+                            )
+                            .step(1)
+                            .on_input(Message::SettingStandTimeChanged)
+                            .on_submit(Message::SettingsSaveAndModalHide),
+                        ],
+                        column![
+                            text("Choose start stance:"),
+                            radio(
+                                "Sitting",
+                                Stance::Sitting,
+                                Some(self.settings_modal_fields.start_stance),
+                                Message::SettingStartStanceChanged
+                            ),
+                            radio(
+                                "Standing",
+                                Stance::Standing,
+                                Some(self.settings_modal_fields.start_stance),
+                                Message::SettingStartStanceChanged
+                            ),
+                        ],
+                        rule::horizontal(HORIZONTAL_RULE_HEIGHT),
+                        row![
+                            button(text("Save"))
+                                .style(button::success)
+                                .on_press(Message::SettingsSaveAndModalHide),
+                            space::horizontal(),
+                            button(text("Cancel"))
+                                .style(button::danger)
+                                .on_press(Message::SettingsModalHide),
+                        ]
+                        .width(iced::Length::Fill)
+                        .padding(ROW_PADDING)
+                        .spacing(ROW_SPACING)
+                        .align_y(iced::Alignment::Center),
+                    ]
+                    .spacing(10)
+                ]
+                .spacing(20),
+            )
+            .width(300)
+            .padding(10)
+            .style(container::rounded_box);
+
+            modal(main_content, modal_content, Message::SettingsModalHide)
+        } else {
+            main_content.into()
+        }
     }
 
     pub fn theme(&self) -> Option<iced::Theme> {
@@ -301,4 +429,44 @@ impl App {
             }
         }
     }
+
+    fn reset_modal_fields(&mut self) {
+        self.settings_modal_fields.sit_duration_as_min = self.settings.sit_duration_as_min;
+        self.settings_modal_fields.stand_duration_as_min = self.settings.stand_duration_as_min;
+        self.settings_modal_fields.start_stance = self.settings.start_stance;
+    }
+
+    fn hide_modal(&mut self) {
+        self.settings_modal_show = false;
+        self.reset_modal_fields();
+    }
+}
+
+fn modal<'a, Message>(
+    base: impl Into<iced::Element<'a, Message>>,
+    content: impl Into<iced::Element<'a, Message>>,
+    on_blur: Message,
+) -> iced::Element<'a, Message>
+where
+    Message: Clone + 'a,
+{
+    stack![
+        base.into(),
+        opaque(
+            mouse_area(center(opaque(content)).style(|_theme| {
+                container::Style {
+                    background: Some(
+                        iced::Color {
+                            a: 0.8,
+                            ..iced::Color::BLACK
+                        }
+                        .into(),
+                    ),
+                    ..container::Style::default()
+                }
+            }))
+            .on_press(on_blur)
+        )
+    ]
+    .into()
 }

@@ -14,7 +14,7 @@ impl Settings {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum Stance {
     #[default]
     Sitting,
