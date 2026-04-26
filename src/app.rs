@@ -2,11 +2,12 @@ use crate::settings::{Settings, Stance};
 use crate::style;
 
 use iced::time::{self, Duration, Instant, milliseconds};
-use iced::widget::{button, column, row, rule, space, text};
+use iced::widget::{button, column, row, rule, space, svg, text};
 use notify_rust::{Notification, Timeout};
 
 #[derive(Debug, Default)]
 pub struct App {
+    theme: Option<iced::Theme>,
     settings: Settings,
     current_timer_cycle: Option<TimerCycleInfo>,
 }
@@ -18,17 +19,19 @@ struct TimerCycleInfo {
     stace: Stance,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum Message {
     TimerStart,
     TimerStop,
     TimerTick,
     ManualTimerCycleEnd,
+    ThemeChanged(Option<iced::Theme>),
 }
 
 impl App {
     pub fn new() -> Self {
         Self {
+            theme: None,
             settings: Settings {
                 sit_duration_as_min: 1,
                 stand_duration_as_min: 2,
@@ -57,6 +60,7 @@ impl App {
             Message::ManualTimerCycleEnd => {
                 self.start_new_cycle();
             }
+            Message::ThemeChanged(new_theme) => self.theme = new_theme,
         }
     }
 
@@ -208,7 +212,50 @@ impl App {
             })
             .padding(style::BUTTON_PADDING);
 
-        column![
+        let create_icon_btn = |file_path: &str| {
+            button(svg(file_path).content_fit(iced::ContentFit::Contain).style(
+                |theme: &iced::Theme, _style| svg::Style {
+                    color: Some(theme.palette().text),
+                },
+            ))
+            .width(iced::Length::Shrink)
+            .height(iced::Length::Shrink)
+            .padding(7)
+            .style(button::background)
+        };
+
+        let theme_toggle_btn = match self.theme {
+            Some(iced::Theme::Dark) => create_icon_btn(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/resources/images/sun.svg"
+            ))
+            .on_press(Message::ThemeChanged(Some(iced::Theme::Light))),
+
+            Some(iced::Theme::Light) => create_icon_btn(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/resources/images/sun-moon.svg"
+            ))
+            .on_press(Message::ThemeChanged(None)),
+
+            None | _ => create_icon_btn(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/resources/images/moon.svg"
+            ))
+            .on_press(Message::ThemeChanged(Some(iced::Theme::Dark))),
+        };
+
+        let top_button_bar = row![space().width(iced::Length::Fill), theme_toggle_btn,]
+            .width(iced::Length::Fill)
+            .padding(iced::Padding {
+                top: style::OUTER_PADDING as f32,
+                right: style::OUTER_PADDING as f32,
+                left: style::OUTER_PADDING as f32,
+                bottom: 0.0,
+            })
+            .spacing(style::ROW_SPACING)
+            .align_y(iced::Alignment::Center);
+
+        let main_content = column![
             main_heading,
             rule::horizontal(style::HORIZONTAL_RULE_HEIGHT),
             info_texts,
@@ -223,13 +270,22 @@ impl App {
             .spacing(style::ROW_SPACING)
             .align_y(iced::Alignment::Center),
         ]
-        .padding(style::MAIN_COLUMN_PADDING)
+        .padding(iced::Padding {
+            top: 0.0,
+            right: style::OUTER_PADDING as f32,
+            left: style::OUTER_PADDING as f32,
+            bottom: style::OUTER_PADDING as f32,
+        })
         .spacing(style::MAIN_COLUMN_SPACING)
-        .align_x(iced::Alignment::Center)
-        .into()
+        .align_x(iced::Alignment::Center);
+
+        column![top_button_bar, main_content]
+            .padding(0)
+            .spacing(0)
+            .into()
     }
 
-    pub fn theme(&self) -> iced::Theme {
-        iced::Theme::Dark
+    pub fn theme(&self) -> Option<iced::Theme> {
+        self.theme.clone()
     }
 }

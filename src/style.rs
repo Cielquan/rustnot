@@ -1,4 +1,4 @@
-pub const MAIN_COLUMN_PADDING: u16 = 20;
+pub const OUTER_PADDING: u16 = 20;
 pub const MAIN_COLUMN_SPACING: u32 = 10;
 
 pub const HORIZONTAL_RULE_HEIGHT: u32 = 2;
