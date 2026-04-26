@@ -155,7 +155,7 @@ impl App {
         pub const ROW_SPACING: u32 = 10;
 
         pub const TEXT_SIZE_HEADING: u32 = 45;
-        pub const TEXT_SIZE_NORMAL: u32 = 25;
+        pub const TEXT_SIZE_NORMAL: u32 = 20;
 
         let main_heading = text("RustNot")
             .width(iced::Length::Fill)
