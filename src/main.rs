@@ -11,7 +11,7 @@ pub fn main() -> iced::Result {
         .window(iced::window::settings::Settings {
             size: iced::Size {
                 width: 400.0,
-                height: 600.0,
+                height: 360.0,
             },
             ..Default::default()
         })
