@@ -2,7 +2,6 @@ use iced;
 
 mod app;
 mod settings;
-mod style;
 
 pub fn main() -> iced::Result {
     iced::application(app::App::new, app::App::update, app::App::view)
