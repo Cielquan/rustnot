@@ -328,7 +328,7 @@ impl App {
         let main_content = container(column![top_button_bar, main_content].padding(0).spacing(0));
 
         if self.settings_modal_show {
-            let modal_content = container(
+            let modal_content: Element<'_, Message> = container(
                 column![
                     text("Settings").size(TEXT_SIZE_HEADING),
                     rule::horizontal(HORIZONTAL_RULE_HEIGHT),
@@ -391,7 +391,8 @@ impl App {
             )
             .width(300)
             .padding(10)
-            .style(container::rounded_box);
+            .style(container::rounded_box)
+            .into();
 
             modal(main_content, modal_content, Message::SettingsModalHide)
         } else {
