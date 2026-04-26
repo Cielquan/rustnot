@@ -1,5 +1,6 @@
 use crate::settings::{Settings, Stance};
 
+use iced::keyboard::{self, key};
 use iced::time::{self, Duration, Instant, milliseconds};
 use iced::widget::{
     button, center, column, container, mouse_area, opaque, operation, radio, row, rule, space,
@@ -26,6 +27,7 @@ struct TimerCycleInfo {
 
 #[derive(Debug, Clone)]
 pub enum Message {
+    KeyBoardEvent(keyboard::Event),
     TimerStart,
     TimerStop,
     TimerTick,
@@ -60,6 +62,18 @@ impl App {
 
     pub fn update(&mut self, message: Message) -> iced::Task<Message> {
         match message {
+            Message::KeyBoardEvent(keyboard_event) => match keyboard_event {
+                keyboard::Event::KeyPressed {
+                    key: keyboard::Key::Named(key::Named::Escape),
+                    ..
+                } => {
+                    if self.settings_modal_show {
+                        self.hide_modal();
+                    }
+                    iced::Task::none()
+                }
+                _ => iced::Task::none(),
+            },
             Message::TimerStart => {
                 self.start_new_cycle();
                 iced::Task::none()
@@ -123,7 +137,7 @@ impl App {
             Some(_) => time::every(milliseconds(100)).map(|_| Message::TimerTick),
         };
 
-        iced::Subscription::batch(vec![tick])
+        iced::Subscription::batch(vec![tick, keyboard::listen().map(Message::KeyBoardEvent)])
     }
 
     pub fn view(&self) -> iced::Element<'_, Message> {
