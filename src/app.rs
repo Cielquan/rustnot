@@ -143,13 +143,12 @@ impl App {
 
     pub fn view(&self) -> iced::Element<'_, Message> {
         pub const OUTER_PADDING: u16 = 20;
-        pub const MAIN_COLUMN_SPACING: u32 = 10;
+        pub const MAIN_COLUMN_SPACING: u32 = 20;
 
         pub const HORIZONTAL_RULE_HEIGHT: u32 = 2;
 
         pub const BUTTON_PADDING: u16 = 10;
 
-        pub const COL_PADDING: u16 = 15;
         pub const COL_SPACING: u32 = 5;
 
         pub const ROW_PADDING: u16 = 15;
@@ -275,7 +274,6 @@ impl App {
             current_stance_info,
             next_stance_switch_info,
         ]
-        .padding(COL_PADDING)
         .spacing(COL_SPACING);
 
         let timer_control_btn = (match &self.current_timer_cycle {
@@ -354,24 +352,27 @@ impl App {
                         .align_y(iced::Alignment::Center),
                         column![
                             text("Start stance:").size(TEXT_SIZE_NORMAL),
-                            radio(
-                                "Sitting",
-                                Stance::Sitting,
-                                Some(self.settings_modal_fields.start_stance),
-                                Message::SettingStartStanceChanged
-                            )
-                            .size(TEXT_SIZE_NORMAL),
-                            radio(
-                                "Standing",
-                                Stance::Standing,
-                                Some(self.settings_modal_fields.start_stance),
-                                Message::SettingStartStanceChanged
-                            )
-                            .size(TEXT_SIZE_NORMAL),
+                            row![
+                                radio(
+                                    "Sitting",
+                                    Stance::Sitting,
+                                    Some(self.settings_modal_fields.start_stance),
+                                    Message::SettingStartStanceChanged
+                                )
+                                .size(TEXT_SIZE_NORMAL),
+                                space::horizontal(),
+                                radio(
+                                    "Standing",
+                                    Stance::Standing,
+                                    Some(self.settings_modal_fields.start_stance),
+                                    Message::SettingStartStanceChanged
+                                )
+                                .size(TEXT_SIZE_NORMAL),
+                            ],
                         ]
-                        .spacing(5),
+                        .spacing(COL_SPACING),
                     ]
-                    .spacing(10),
+                    .spacing(COL_SPACING),
                     rule::horizontal(HORIZONTAL_RULE_HEIGHT),
                     row![
                         button(text("Save"))
@@ -387,7 +388,7 @@ impl App {
                     .spacing(ROW_SPACING)
                     .align_y(iced::Alignment::Center),
                 ]
-                .spacing(20),
+                .spacing(MAIN_COLUMN_SPACING),
             )
             .width(350)
             .padding(OUTER_PADDING)
@@ -396,7 +397,7 @@ impl App {
 
             modal(main_content, modal_content, Message::SettingsModalHide)
         } else {
-            main_content.explain(iced::Color::BLACK)
+            main_content
         }
     }
 
