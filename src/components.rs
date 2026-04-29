@@ -29,14 +29,16 @@ where
     .into()
 }
 
-pub fn create_icon_btn<'a, Message>(
-    file_path: &str,
+pub fn icon_button<'a, Message>(
+    icon_file_path: &str,
 ) -> Button<'a, Message, iced::Theme, iced::Renderer> {
-    button(svg(file_path).content_fit(iced::ContentFit::Contain).style(
-        |theme: &iced::Theme, _style| svg::Style {
-            color: Some(theme.palette().text),
-        },
-    ))
+    button(
+        svg(icon_file_path)
+            .content_fit(iced::ContentFit::Contain)
+            .style(|theme: &iced::Theme, _style| svg::Style {
+                color: Some(theme.palette().text),
+            }),
+    )
     .width(iced::Length::Shrink)
     .height(iced::Length::Shrink)
     .padding(7)

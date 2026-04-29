@@ -1,4 +1,4 @@
-use crate::components::{create_icon_btn, modal};
+use crate::components::{icon_button, modal};
 use crate::settings::{Settings, Stance};
 use crate::settings_file::{SETTINGS_FILE_NAME, SettingsFileError};
 use crate::styles::tooltip_style;
@@ -226,26 +226,26 @@ impl App {
             .size(TEXT_SIZE_HEADING);
 
         let theme_toggle_btn = match self.theme {
-            Some(iced::Theme::Dark) => create_icon_btn(concat!(
+            Some(iced::Theme::Dark) => icon_button(concat!(
                 env!("CARGO_MANIFEST_DIR"),
                 "/resources/images/sun.svg"
             ))
             .on_press(Message::ThemeChanged(Some(iced::Theme::Light))),
 
-            Some(iced::Theme::Light) => create_icon_btn(concat!(
+            Some(iced::Theme::Light) => icon_button(concat!(
                 env!("CARGO_MANIFEST_DIR"),
                 "/resources/images/sun-moon.svg"
             ))
             .on_press(Message::ThemeChanged(None)),
 
-            None | _ => create_icon_btn(concat!(
+            None | _ => icon_button(concat!(
                 env!("CARGO_MANIFEST_DIR"),
                 "/resources/images/moon.svg"
             ))
             .on_press(Message::ThemeChanged(Some(iced::Theme::Dark))),
         };
 
-        let settings_btn = create_icon_btn(concat!(
+        let settings_btn = icon_button(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/resources/images/settings.svg"
         ))
