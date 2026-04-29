@@ -1,7 +1,8 @@
-use crate::styles::tooltip_style;
+use crate::styles::{self, tooltip_style};
 use iced::time::milliseconds;
 use iced::widget::{
-    Button, Svg, Tooltip, button, center, container, mouse_area, opaque, stack, svg, tooltip,
+    Button, Svg, Tooltip, button, center, container, mouse_area, opaque, row, stack, svg, text,
+    tooltip,
 };
 
 pub fn modal<'a, Message>(
@@ -64,4 +65,21 @@ where
         .gap(5)
         .delay(milliseconds(500))
         .style(tooltip_style)
+}
+
+pub fn button_with_icon<'a, Message: 'a>(
+    label_text: impl text::IntoFragment<'a>,
+    icon_file_path: &str,
+) -> Button<'a, Message, iced::Theme, iced::Renderer> {
+    button(
+        row![
+            icon(icon_file_path, Some(20)),
+            text(label_text)
+                .size(16)
+                .wrapping(iced::advanced::text::Wrapping::None)
+        ]
+        .spacing(7)
+        .align_y(iced::Alignment::Center),
+    )
+    .padding(styles::BUTTON_PADDING)
 }
