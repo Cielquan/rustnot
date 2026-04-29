@@ -6,7 +6,7 @@ use std::path::Path;
 
 use thiserror::Error;
 
-const SETTINGS_FILE_NAME: &str = "rustnot_config.toml";
+pub const SETTINGS_FILE_NAME: &str = "rustnot_config.toml";
 
 #[derive(Error, Debug, Clone)]
 pub enum SettingsFileError {

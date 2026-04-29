@@ -1,12 +1,12 @@
 use crate::settings::{Settings, Stance};
-use crate::settings_file::SettingsFileError;
+use crate::settings_file::{SETTINGS_FILE_NAME, SettingsFileError};
 
 use iced::Element;
 use iced::keyboard::{self, key};
 use iced::time::{self, Duration, Instant, milliseconds};
 use iced::widget::{
     button, center, column, container, mouse_area, opaque, operation, radio, row, rule, space,
-    stack, svg, text,
+    stack, svg, text, tooltip,
 };
 use iced_aw;
 use notify_rust::{Notification, Timeout};
@@ -457,13 +457,27 @@ impl App {
                     .spacing(ROW_SPACING)
                     .align_y(iced::Alignment::Center),
                     row![
-                        button(text("Save to file"))
-                            .style(button::primary)
-                            .on_press(Message::SettingsSaveToFile),
+                        tooltip(
+                            button(text("Save to file"))
+                                .style(button::primary)
+                                .on_press(Message::SettingsSaveToFile),
+                            constcat::concat!("File: ", SETTINGS_FILE_NAME),
+                            tooltip::Position::Top
+                        )
+                        .gap(5)
+                        .delay(milliseconds(500))
+                        .style(tooltip_style),
                         space::horizontal(),
-                        button(text("Load from file"))
-                            .style(button::primary)
-                            .on_press(Message::SettingsLoadFromFile),
+                        tooltip(
+                            button(text("Load from file"))
+                                .style(button::primary)
+                                .on_press(Message::SettingsLoadFromFile),
+                            constcat::concat!("File: ", SETTINGS_FILE_NAME),
+                            tooltip::Position::Top
+                        )
+                        .gap(5)
+                        .delay(milliseconds(500))
+                        .style(tooltip_style),
                     ]
                     .width(iced::Length::Fill)
                     .padding([0, ROW_PADDING])
@@ -567,4 +581,15 @@ where
         )
     ]
     .into()
+}
+
+fn tooltip_style(theme: &iced::Theme) -> container::Style {
+    container::Style {
+        border: iced::Border {
+            color: iced::Color::BLACK,
+            width: 2.0,
+            radius: iced::border::radius(3),
+        },
+        ..container::rounded_box(theme)
+    }
 }
