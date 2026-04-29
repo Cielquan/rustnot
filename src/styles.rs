@@ -5,7 +5,7 @@ pub const MAIN_COLUMN_SPACING: u32 = 20;
 
 pub const HORIZONTAL_RULE_HEIGHT: u32 = 2;
 
-pub const BUTTON_PADDING: u16 = 10;
+pub const BUTTON_PADDING: [u16; 2] = [8, 10];
 
 pub const COL_SPACING: u32 = 5;
 
