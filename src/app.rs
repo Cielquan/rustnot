@@ -1,13 +1,12 @@
+use crate::components::{create_icon_btn, modal};
 use crate::settings::{Settings, Stance};
 use crate::settings_file::{SETTINGS_FILE_NAME, SettingsFileError};
+use crate::styles::tooltip_style;
 
 use iced::Element;
 use iced::keyboard::{self, key};
 use iced::time::{self, Duration, Instant, milliseconds};
-use iced::widget::{
-    button, center, column, container, mouse_area, opaque, operation, radio, row, rule, space,
-    stack, svg, text, tooltip,
-};
+use iced::widget::{button, column, container, operation, radio, row, rule, space, text, tooltip};
 use iced_aw;
 use notify_rust::{Notification, Timeout};
 
@@ -225,18 +224,6 @@ impl App {
             .width(iced::Length::Fill)
             .align_x(iced::Alignment::Start)
             .size(TEXT_SIZE_HEADING);
-
-        let create_icon_btn = |file_path: &str| {
-            button(svg(file_path).content_fit(iced::ContentFit::Contain).style(
-                |theme: &iced::Theme, _style| svg::Style {
-                    color: Some(theme.palette().text),
-                },
-            ))
-            .width(iced::Length::Shrink)
-            .height(iced::Length::Shrink)
-            .padding(7)
-            .style(button::background)
-        };
 
         let theme_toggle_btn = match self.theme {
             Some(iced::Theme::Dark) => create_icon_btn(concat!(
@@ -551,45 +538,5 @@ impl App {
     fn hide_modal(&mut self) {
         self.settings_modal_show = false;
         self.reset_modal_fields();
-    }
-}
-
-fn modal<'a, Message>(
-    base: impl Into<iced::Element<'a, Message>>,
-    content: impl Into<iced::Element<'a, Message>>,
-    on_blur: Message,
-) -> iced::Element<'a, Message>
-where
-    Message: Clone + 'a,
-{
-    stack![
-        base.into(),
-        opaque(
-            mouse_area(center(opaque(content)).style(|_theme| {
-                container::Style {
-                    background: Some(
-                        iced::Color {
-                            a: 0.8,
-                            ..iced::Color::BLACK
-                        }
-                        .into(),
-                    ),
-                    ..container::Style::default()
-                }
-            }))
-            .on_press(on_blur)
-        )
-    ]
-    .into()
-}
-
-fn tooltip_style(theme: &iced::Theme) -> container::Style {
-    container::Style {
-        border: iced::Border {
-            color: iced::Color::BLACK,
-            width: 2.0,
-            radius: iced::border::radius(3),
-        },
-        ..container::rounded_box(theme)
     }
 }

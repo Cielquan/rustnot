@@ -4,8 +4,10 @@ use iced;
 extern crate serde_derive;
 
 mod app;
+mod components;
 mod settings;
 mod settings_file;
+mod styles;
 
 pub fn main() -> iced::Result {
     iced::application(app::App::new, app::App::update, app::App::view)
