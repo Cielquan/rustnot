@@ -1,7 +1,7 @@
-use crate::components::{icon_button, modal};
+use crate::components::{button_with_icon, icon_button, modal};
 use crate::settings::{Settings, Stance};
 use crate::settings_file::{SETTINGS_FILE_NAME, SettingsFileError};
-use crate::styles::tooltip_style;
+use crate::styles::{self, tooltip_style};
 
 use iced::Element;
 use iced::keyboard::{self, key};
@@ -205,25 +205,10 @@ impl App {
     }
 
     pub fn view(&self) -> iced::Element<'_, Message> {
-        pub const OUTER_PADDING: u16 = 20;
-        pub const MAIN_COLUMN_SPACING: u32 = 20;
-
-        pub const HORIZONTAL_RULE_HEIGHT: u32 = 2;
-
-        pub const BUTTON_PADDING: u16 = 10;
-
-        pub const COL_SPACING: u32 = 5;
-
-        pub const ROW_PADDING: u16 = 15;
-        pub const ROW_SPACING: u32 = 10;
-
-        pub const TEXT_SIZE_HEADING: u32 = 45;
-        pub const TEXT_SIZE_NORMAL: u32 = 20;
-
         let main_heading = text("RustNot")
             .width(iced::Length::Fill)
             .align_x(iced::Alignment::Start)
-            .size(TEXT_SIZE_HEADING);
+            .size(styles::TEXT_SIZE_HEADING);
 
         let theme_toggle_btn = match self.theme {
             Some(iced::Theme::Dark) => icon_button(concat!(
@@ -255,27 +240,27 @@ impl App {
             text("Sit time [min]:")
                 .width(iced::Length::Fill)
                 .align_x(iced::Alignment::Start)
-                .size(TEXT_SIZE_NORMAL),
+                .size(styles::TEXT_SIZE_NORMAL),
             text!("{}", &self.settings.sit_duration_as_min)
                 .align_x(iced::Alignment::End)
-                .size(TEXT_SIZE_NORMAL),
+                .size(styles::TEXT_SIZE_NORMAL),
         ];
 
         let stand_duration = row![
             text("Stand time [min]:")
                 .width(iced::Length::Fill)
                 .align_x(iced::Alignment::Start)
-                .size(TEXT_SIZE_NORMAL),
+                .size(styles::TEXT_SIZE_NORMAL),
             text!("{}", &self.settings.stand_duration_as_min)
                 .align_x(iced::Alignment::End)
-                .size(TEXT_SIZE_NORMAL),
+                .size(styles::TEXT_SIZE_NORMAL),
         ];
 
         let current_stance_info = row![
             text("Current stance:")
                 .width(iced::Length::Fill)
                 .align_x(iced::Alignment::Start)
-                .size(TEXT_SIZE_NORMAL),
+                .size(styles::TEXT_SIZE_NORMAL),
             text(
                 match if let Some(current_cycle) = &self.current_timer_cycle {
                     &current_cycle.stace
@@ -287,14 +272,14 @@ impl App {
                 },
             )
             .align_x(iced::Alignment::End)
-            .size(TEXT_SIZE_NORMAL)
+            .size(styles::TEXT_SIZE_NORMAL)
         ];
 
         let next_stance_switch_info = row![
             text("Next cycle in:")
                 .width(iced::Length::Fill)
                 .align_x(iced::Alignment::Start)
-                .size(TEXT_SIZE_NORMAL),
+                .size(styles::TEXT_SIZE_NORMAL),
             text(match &self.current_timer_cycle {
                 Some(cycle_info) => {
                     const MINUTE: u64 = 60;
@@ -316,7 +301,7 @@ impl App {
                 None => "-".to_string(),
             })
             .align_x(iced::Alignment::End)
-            .size(TEXT_SIZE_NORMAL)
+            .size(styles::TEXT_SIZE_NORMAL)
         ];
 
         let info_texts = column![
@@ -325,7 +310,7 @@ impl App {
             current_stance_info,
             next_stance_switch_info,
         ]
-        .spacing(COL_SPACING);
+        .spacing(styles::COL_SPACING);
 
         let timer_control_btn = (match &self.current_timer_cycle {
             None => button(text("Start timer").align_x(iced::Center)).on_press(Message::TimerStart),
@@ -333,7 +318,7 @@ impl App {
                 .style(button::danger)
                 .on_press(Message::TimerStop),
         })
-        .padding(BUTTON_PADDING)
+        .padding(styles::BUTTON_PADDING)
         .width(105);
 
         let stance_switch_btn = button(text("Switch stance now").align_x(iced::Center))
@@ -342,7 +327,7 @@ impl App {
             } else {
                 None
             })
-            .padding(BUTTON_PADDING);
+            .padding(styles::BUTTON_PADDING);
 
         let main_content: Element<'_, Message> = column![
             row![
@@ -351,19 +336,19 @@ impl App {
                 theme_toggle_btn,
                 settings_btn
             ]
-            .spacing(ROW_SPACING)
+            .spacing(styles::ROW_SPACING)
             .align_y(iced::Alignment::Start),
-            rule::horizontal(HORIZONTAL_RULE_HEIGHT),
+            rule::horizontal(styles::HORIZONTAL_RULE_HEIGHT),
             info_texts,
-            rule::horizontal(HORIZONTAL_RULE_HEIGHT),
+            rule::horizontal(styles::HORIZONTAL_RULE_HEIGHT),
             row![timer_control_btn, space::horizontal(), stance_switch_btn]
                 .width(iced::Length::Fill)
-                .padding(ROW_PADDING)
-                .spacing(ROW_SPACING)
+                .padding(styles::ROW_PADDING)
+                .spacing(styles::ROW_SPACING)
                 .align_y(iced::Alignment::Center),
         ]
-        .padding(OUTER_PADDING)
-        .spacing(MAIN_COLUMN_SPACING)
+        .padding(styles::OUTER_PADDING)
+        .spacing(styles::MAIN_COLUMN_SPACING)
         .align_x(iced::Alignment::Center)
         .height(400)
         .into();
@@ -371,11 +356,11 @@ impl App {
         if self.settings_modal_show {
             let modal_content: Element<'_, Message> = container(
                 column![
-                    text("Settings").size(TEXT_SIZE_HEADING),
-                    rule::horizontal(HORIZONTAL_RULE_HEIGHT),
+                    text("Settings").size(styles::TEXT_SIZE_HEADING),
+                    rule::horizontal(styles::HORIZONTAL_RULE_HEIGHT),
                     column![
                         row![
-                            text("Sit time [min]:").size(TEXT_SIZE_NORMAL),
+                            text("Sit time [min]:").size(styles::TEXT_SIZE_NORMAL),
                             space::horizontal(),
                             iced_aw::number_input(
                                 &self.settings_modal_fields.sit_duration_as_min,
@@ -389,7 +374,7 @@ impl App {
                         ]
                         .align_y(iced::Alignment::Center),
                         row![
-                            text("Stand time [min]:").size(TEXT_SIZE_NORMAL),
+                            text("Stand time [min]:").size(styles::TEXT_SIZE_NORMAL),
                             space::horizontal(),
                             iced_aw::number_input(
                                 &self.settings_modal_fields.stand_duration_as_min,
@@ -403,7 +388,7 @@ impl App {
                         ]
                         .align_y(iced::Alignment::Center),
                         column![
-                            text("Start stance:").size(TEXT_SIZE_NORMAL),
+                            text("Start stance:").size(styles::TEXT_SIZE_NORMAL),
                             row![
                                 radio(
                                     "Sitting",
@@ -411,7 +396,7 @@ impl App {
                                     Some(self.settings_modal_fields.start_stance),
                                     Message::SettingStartStanceChanged
                                 )
-                                .size(TEXT_SIZE_NORMAL),
+                                .size(styles::TEXT_SIZE_NORMAL),
                                 space::horizontal(),
                                 radio(
                                     "Standing",
@@ -419,13 +404,13 @@ impl App {
                                     Some(self.settings_modal_fields.start_stance),
                                     Message::SettingStartStanceChanged
                                 )
-                                .size(TEXT_SIZE_NORMAL),
+                                .size(styles::TEXT_SIZE_NORMAL),
                             ],
                         ]
-                        .spacing(COL_SPACING),
+                        .spacing(styles::COL_SPACING),
                     ]
-                    .spacing(COL_SPACING),
-                    rule::horizontal(HORIZONTAL_RULE_HEIGHT),
+                    .spacing(styles::COL_SPACING),
+                    rule::horizontal(styles::HORIZONTAL_RULE_HEIGHT),
                     row![
                         button(text("Confirm"))
                             .style(button::success)
@@ -440,8 +425,8 @@ impl App {
                             .on_press(Message::SettingsModalHide),
                     ]
                     .width(iced::Length::Fill)
-                    .padding([0, ROW_PADDING])
-                    .spacing(ROW_SPACING)
+                    .padding([0, styles::ROW_PADDING])
+                    .spacing(styles::ROW_SPACING)
                     .align_y(iced::Alignment::Center),
                     row![
                         tooltip(
@@ -467,14 +452,14 @@ impl App {
                         .style(tooltip_style),
                     ]
                     .width(iced::Length::Fill)
-                    .padding([0, ROW_PADDING])
-                    .spacing(ROW_SPACING)
+                    .padding([0, styles::ROW_PADDING])
+                    .spacing(styles::ROW_SPACING)
                     .align_y(iced::Alignment::Center),
                 ]
-                .spacing(MAIN_COLUMN_SPACING),
+                .spacing(styles::MAIN_COLUMN_SPACING),
             )
             .width(350)
-            .padding(OUTER_PADDING)
+            .padding(styles::OUTER_PADDING)
             .style(container::rounded_box)
             .into();
 
