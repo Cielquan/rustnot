@@ -1,12 +1,12 @@
-use crate::components::{button_with_icon, icon_button, modal};
+use crate::components::{button_with_icon, default_tooltip, icon_button, modal};
 use crate::settings::{Settings, Stance};
 use crate::settings_file::{SETTINGS_FILE_NAME, SettingsFileError};
-use crate::styles::{self, tooltip_style};
+use crate::styles;
 
 use iced::Element;
 use iced::keyboard::{self, key};
 use iced::time::{self, Duration, Instant, milliseconds};
-use iced::widget::{button, column, container, operation, radio, row, rule, space, text, tooltip};
+use iced::widget::{button, column, container, operation, radio, row, rule, space, text};
 use iced_aw;
 use notify_rust::{Notification, Timeout};
 
@@ -313,21 +313,32 @@ impl App {
         .spacing(styles::COL_SPACING);
 
         let timer_control_btn = (match &self.current_timer_cycle {
-            None => button(text("Start timer").align_x(iced::Center)).on_press(Message::TimerStart),
-            Some(_) => button(text("Stop timer").align_x(iced::Center))
-                .style(button::danger)
-                .on_press(Message::TimerStop),
+            None => button_with_icon(
+                "Start timer",
+                concat!(env!("CARGO_MANIFEST_DIR"), "/resources/images/play.svg"),
+            )
+            .on_press(Message::TimerStart),
+            Some(_) => button_with_icon(
+                "Stop timer",
+                concat!(env!("CARGO_MANIFEST_DIR"), "/resources/images/pause.svg"),
+            )
+            .style(button::danger)
+            .on_press(Message::TimerStop),
         })
-        .padding(styles::BUTTON_PADDING)
-        .width(105);
+        .width(128);
 
-        let stance_switch_btn = button(text("Switch stance now").align_x(iced::Center))
-            .on_press_maybe(if self.current_timer_cycle.is_some() {
-                Some(Message::ManualTimerCycleEnd)
-            } else {
-                None
-            })
-            .padding(styles::BUTTON_PADDING);
+        let stance_switch_btn = button_with_icon(
+            "Switch stance now",
+            concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/resources/images/fast-forward.svg"
+            ),
+        )
+        .on_press_maybe(if self.current_timer_cycle.is_some() {
+            Some(Message::ManualTimerCycleEnd)
+        } else {
+            None
+        });
 
         let main_content: Element<'_, Message> = column![
             row![
@@ -412,49 +423,60 @@ impl App {
                     .spacing(styles::COL_SPACING),
                     rule::horizontal(styles::HORIZONTAL_RULE_HEIGHT),
                     row![
-                        button(text("Confirm"))
+                        default_tooltip(
+                            icon_button(concat!(
+                                env!("CARGO_MANIFEST_DIR"),
+                                "/resources/images/circle-check.svg"
+                            ),)
                             .style(button::success)
                             .on_press(Message::SettingsConfirmAndModalHide),
+                            "Confirm"
+                        ),
                         space::horizontal(),
-                        button(text("Default"))
-                            .style(button::warning)
-                            .on_press(Message::SettingsResetToDefault),
-                        space::horizontal(),
-                        button(text("Cancel"))
+                        default_tooltip(
+                            icon_button(concat!(
+                                env!("CARGO_MANIFEST_DIR"),
+                                "/resources/images/circle-x.svg"
+                            ),)
                             .style(button::danger)
                             .on_press(Message::SettingsModalHide),
-                    ]
-                    .width(iced::Length::Fill)
-                    .padding([0, styles::ROW_PADDING])
-                    .spacing(styles::ROW_SPACING)
-                    .align_y(iced::Alignment::Center),
-                    row![
-                        tooltip(
-                            button(text("Save to file"))
-                                .style(button::primary)
-                                .on_press(Message::SettingsSaveToFile),
-                            constcat::concat!("File: ", SETTINGS_FILE_NAME),
-                            tooltip::Position::Top
-                        )
-                        .gap(5)
-                        .delay(milliseconds(500))
-                        .style(tooltip_style),
+                            "Cancel"
+                        ),
                         space::horizontal(),
-                        tooltip(
-                            button(text("Load from file"))
-                                .style(button::primary)
-                                .on_press(Message::SettingsLoadFromFile),
-                            constcat::concat!("File: ", SETTINGS_FILE_NAME),
-                            tooltip::Position::Top
-                        )
-                        .gap(5)
-                        .delay(milliseconds(500))
-                        .style(tooltip_style),
+                        default_tooltip(
+                            icon_button(concat!(
+                                env!("CARGO_MANIFEST_DIR"),
+                                "/resources/images/rotate-ccw.svg"
+                            ),)
+                            .style(button::secondary)
+                            .on_press(Message::SettingsResetToDefault),
+                            "Reset to defaults"
+                        ),
+                        space::horizontal(),
+                        default_tooltip(
+                            icon_button(concat!(
+                                env!("CARGO_MANIFEST_DIR"),
+                                "/resources/images/hard-drive-download.svg"
+                            ),)
+                            .style(button::primary)
+                            .on_press(Message::SettingsSaveToFile),
+                            constcat::concat!("Save to file: ", SETTINGS_FILE_NAME),
+                        ),
+                        space::horizontal(),
+                        default_tooltip(
+                            icon_button(concat!(
+                                env!("CARGO_MANIFEST_DIR"),
+                                "/resources/images/hard-drive-upload.svg"
+                            ),)
+                            .style(button::primary)
+                            .on_press(Message::SettingsLoadFromFile),
+                            constcat::concat!("Load from file: ", SETTINGS_FILE_NAME),
+                        ),
                     ]
                     .width(iced::Length::Fill)
                     .padding([0, styles::ROW_PADDING])
                     .spacing(styles::ROW_SPACING)
-                    .align_y(iced::Alignment::Center),
+                    .align_y(iced::Alignment::Center)
                 ]
                 .spacing(styles::MAIN_COLUMN_SPACING),
             )
