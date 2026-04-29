@@ -36,7 +36,7 @@ pub enum Message {
     ThemeChanged(Option<iced::Theme>),
     SettingsModalShow,
     SettingsModalHide,
-    SettingsSaveAndModalHide,
+    SettingsConfirmAndModalHide,
     SettingSitTimeChanged(u64),
     SettingStandTimeChanged(u64),
     SettingStartStanceChanged(Stance),
@@ -121,7 +121,7 @@ impl App {
                 self.settings_modal_fields.start_stance = new_start_stance;
                 iced::Task::none()
             }
-            Message::SettingsSaveAndModalHide => {
+            Message::SettingsConfirmAndModalHide => {
                 self.settings.sit_duration_as_min = self.settings_modal_fields.sit_duration_as_min;
                 self.settings.stand_duration_as_min =
                     self.settings_modal_fields.stand_duration_as_min;
@@ -333,7 +333,7 @@ impl App {
                             .width(75)
                             .step(1)
                             .on_input(Message::SettingSitTimeChanged)
-                            .on_submit(Message::SettingsSaveAndModalHide),
+                            .on_submit(Message::SettingsConfirmAndModalHide),
                         ]
                         .align_y(iced::Alignment::Center),
                         row![
@@ -347,7 +347,7 @@ impl App {
                             .width(75)
                             .step(1)
                             .on_input(Message::SettingStandTimeChanged)
-                            .on_submit(Message::SettingsSaveAndModalHide),
+                            .on_submit(Message::SettingsConfirmAndModalHide),
                         ]
                         .align_y(iced::Alignment::Center),
                         column![
@@ -375,9 +375,9 @@ impl App {
                     .spacing(COL_SPACING),
                     rule::horizontal(HORIZONTAL_RULE_HEIGHT),
                     row![
-                        button(text("Save"))
+                        button(text("Confirm"))
                             .style(button::success)
-                            .on_press(Message::SettingsSaveAndModalHide),
+                            .on_press(Message::SettingsConfirmAndModalHide),
                         space::horizontal(),
                         button(text("Cancel"))
                             .style(button::danger)
