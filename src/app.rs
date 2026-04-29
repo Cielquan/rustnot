@@ -47,16 +47,8 @@ impl App {
         Self {
             theme: None,
             settings_modal_show: false,
-            settings: Settings {
-                sit_duration_as_min: 45,
-                stand_duration_as_min: 20,
-                start_stance: Stance::default(),
-            },
-            settings_modal_fields: Settings {
-                sit_duration_as_min: 45,
-                stand_duration_as_min: 20,
-                start_stance: Stance::default(),
-            },
+            settings: Settings::default(),
+            settings_modal_fields: Settings::default(),
             current_timer_cycle: None,
         }
     }

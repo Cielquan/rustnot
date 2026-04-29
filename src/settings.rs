@@ -1,8 +1,18 @@
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Settings {
     pub sit_duration_as_min: u64,
     pub stand_duration_as_min: u64,
     pub start_stance: Stance,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            sit_duration_as_min: 45,
+            stand_duration_as_min: 20,
+            start_stance: Stance::default(),
+        }
+    }
 }
 
 impl Settings {
