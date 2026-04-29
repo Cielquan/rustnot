@@ -328,7 +328,7 @@ impl App {
         .width(128);
 
         let stance_switch_btn = button_with_icon(
-            "Switch stance now",
+            "Skip cycle",
             concat!(
                 env!("CARGO_MANIFEST_DIR"),
                 "/resources/images/fast-forward.svg"
