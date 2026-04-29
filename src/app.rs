@@ -38,6 +38,7 @@ pub enum Message {
     SettingsModalShow,
     SettingsModalHide,
     SettingsConfirmAndModalHide,
+    SettingsResetToDefault,
     SettingSitTimeChanged(u64),
     SettingStandTimeChanged(u64),
     SettingStartStanceChanged(Stance),
@@ -149,6 +150,10 @@ impl App {
                     self.settings_modal_fields.stand_duration_as_min;
                 self.settings.start_stance = self.settings_modal_fields.start_stance;
                 self.hide_modal();
+                iced::Task::none()
+            }
+            Message::SettingsResetToDefault => {
+                self.settings_modal_fields = Settings::default();
                 iced::Task::none()
             }
             Message::SettingsSaveToFile => {
@@ -438,6 +443,10 @@ impl App {
                         button(text("Confirm"))
                             .style(button::success)
                             .on_press(Message::SettingsConfirmAndModalHide),
+                        space::horizontal(),
+                        button(text("Default"))
+                            .style(button::warning)
+                            .on_press(Message::SettingsResetToDefault),
                         space::horizontal(),
                         button(text("Cancel"))
                             .style(button::danger)
