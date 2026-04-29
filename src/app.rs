@@ -1,4 +1,5 @@
 use crate::settings::{Settings, Stance};
+use crate::settings_file::SettingsFileError;
 
 use iced::Element;
 use iced::keyboard::{self, key};
@@ -40,15 +41,44 @@ pub enum Message {
     SettingSitTimeChanged(u64),
     SettingStandTimeChanged(u64),
     SettingStartStanceChanged(Stance),
+    SettingsSaveToFile,
+    SettingsLoadFromFile,
 }
 
 impl App {
     pub fn new() -> Self {
+        let loaded_settings = match Settings::load_from_file() {
+            Err(SettingsFileError::MissingFile) => Settings::default(),
+            Err(err) => {
+                Notification::new()
+                    .summary("Failed loading settings")
+                    .body(&format!(
+                        "An error occured while loading the settings from file: {}",
+                        err
+                    ))
+                    .sound_name("dialog-error")
+                    .timeout(Timeout::Milliseconds(10 * 1000))
+                    .show()
+                    .expect("unable to toast");
+                Settings::default()
+            }
+            Ok(s) => {
+                Notification::new()
+                    .summary("Settings loaded")
+                    .body("Successfully loaded settings from file.")
+                    .sound_name("dialog-information")
+                    .timeout(Timeout::Milliseconds(10 * 1000))
+                    .show()
+                    .expect("unable to toast");
+                s
+            }
+        };
+
         Self {
             theme: None,
             settings_modal_show: false,
-            settings: Settings::default(),
-            settings_modal_fields: Settings::default(),
+            settings: loaded_settings,
+            settings_modal_fields: loaded_settings,
             current_timer_cycle: None,
         }
     }
@@ -119,6 +149,43 @@ impl App {
                     self.settings_modal_fields.stand_duration_as_min;
                 self.settings.start_stance = self.settings_modal_fields.start_stance;
                 self.hide_modal();
+                iced::Task::none()
+            }
+            Message::SettingsSaveToFile => {
+                match self.settings_modal_fields.save_to_file() {
+                    Err(err) => {
+                        Notification::new()
+                            .summary("Failed saving settings")
+                            .body(&format!(
+                                "An error occured while saving the settings to file: {}",
+                                err
+                            ))
+                            .sound_name("dialog-error")
+                            .timeout(Timeout::Milliseconds(10 * 1000))
+                            .show()
+                            .expect("unable to toast");
+                        return iced::Task::none();
+                    }
+                    Ok(_) => return iced::Task::none(),
+                };
+            }
+            Message::SettingsLoadFromFile => {
+                self.settings_modal_fields = match Settings::load_from_file() {
+                    Err(err) => {
+                        Notification::new()
+                            .summary("Failed loading settings")
+                            .body(&format!(
+                                "An error occured while loading the settings from file: {}",
+                                err
+                            ))
+                            .sound_name("dialog-error")
+                            .timeout(Timeout::Milliseconds(10 * 1000))
+                            .show()
+                            .expect("unable to toast");
+                        return iced::Task::none();
+                    }
+                    Ok(s) => s,
+                };
                 iced::Task::none()
             }
         }
@@ -306,6 +373,7 @@ impl App {
         .padding(OUTER_PADDING)
         .spacing(MAIN_COLUMN_SPACING)
         .align_x(iced::Alignment::Center)
+        .height(400)
         .into();
 
         if self.settings_modal_show {
@@ -374,6 +442,19 @@ impl App {
                         button(text("Cancel"))
                             .style(button::danger)
                             .on_press(Message::SettingsModalHide),
+                    ]
+                    .width(iced::Length::Fill)
+                    .padding([0, ROW_PADDING])
+                    .spacing(ROW_SPACING)
+                    .align_y(iced::Alignment::Center),
+                    row![
+                        button(text("Save to file"))
+                            .style(button::primary)
+                            .on_press(Message::SettingsSaveToFile),
+                        space::horizontal(),
+                        button(text("Load from file"))
+                            .style(button::primary)
+                            .on_press(Message::SettingsLoadFromFile),
                     ]
                     .width(iced::Length::Fill)
                     .padding([0, ROW_PADDING])

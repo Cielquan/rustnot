@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct Settings {
     pub sit_duration_as_min: u64,
     pub stand_duration_as_min: u64,
@@ -24,7 +24,7 @@ impl Settings {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 pub enum Stance {
     #[default]
     Sitting,
