@@ -1,4 +1,8 @@
-use iced::widget::{Button, button, center, container, mouse_area, opaque, stack, svg};
+use crate::styles::tooltip_style;
+use iced::time::milliseconds;
+use iced::widget::{
+    Button, Svg, Tooltip, button, center, container, mouse_area, opaque, stack, svg, tooltip,
+};
 
 pub fn modal<'a, Message>(
     base: impl Into<iced::Element<'a, Message>>,
@@ -47,4 +51,17 @@ pub fn icon_button<'a, Message>(
         .height(iced::Length::Shrink)
         .padding(7)
         .style(button::background)
+}
+
+pub fn default_tooltip<'a, Message, Renderer>(
+    content: impl Into<iced::Element<'a, Message, iced::Theme, Renderer>>,
+    tooltip_text: impl Into<iced::Element<'a, Message, iced::Theme, Renderer>>,
+) -> Tooltip<'a, Message, iced::Theme, Renderer>
+where
+    Renderer: iced::advanced::text::Renderer,
+{
+    tooltip(content, tooltip_text, tooltip::Position::Top)
+        .gap(5)
+        .delay(milliseconds(500))
+        .style(tooltip_style)
 }
