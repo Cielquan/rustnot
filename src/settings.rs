@@ -8,7 +8,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            sit_duration_as_min: 45,
+            sit_duration_as_min: 40,
             stand_duration_as_min: 20,
             start_stance: Stance::default(),
         }
