@@ -1,3 +1,4 @@
+Pipfile.lock
 node_modules
 # Ignore artifacts:
 build

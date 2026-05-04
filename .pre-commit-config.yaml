@@ -1,6 +1,6 @@
 ---
 minimum_pre_commit_version: "1.15"
-default_stages: [commit]
+default_stages: [pre-commit]
 
 ci:
   skip: []
@@ -31,12 +31,12 @@ repos:
 
   # code unspecific out-of-the-box hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: 38b88246ccc552bffaaf54259d064beeee434539 # frozen: v4.0.1
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
     hooks:
       - id: end-of-file-fixer
-        stages: [commit]
+        stages: [pre-commit]
       - id: trailing-whitespace
-        stages: [commit]
+        stages: [pre-commit]
 
   # ----------------------------------------------
   # Rust
@@ -59,14 +59,18 @@ repos:
   # JS / TS / HTML / CSS / MD / JSON / YAML
   # ----------------------------------------------
 
-  # prettier - JS formater
+  # prettier - multi formatter
   - repo: https://github.com/pre-commit/mirrors-prettier
     # https://github.com/prettier/prettier
-    # Config file: .prettierrc (JSON, YAML)
-    # Ignore file: .prettierignore (file ignore pattern)
-    rev: a99a3fbe79a9d346cabd02a5e167ad0edafe616b # frozen: v2.3.0
+    # Config file: .prettierrc.js
+    #     https://prettier.io/docs/en/configuration.html
+    # Ignore file: .prettierignore [file ignore pattern]
+    rev: ffb6a759a979008c0e6dff86e39f4745a2d9eac4 # frozen: v3.1.0
     hooks:
       - id: prettier
+        additional_dependencies:
+          - prettier@3.5.3 # NOTE: version overwrites rev version - keep in sync
+        args: ["--ignore-path", ".gitignore"]
 
   # ####################################################################################
   #
@@ -91,7 +95,7 @@ repos:
 
   # code unspecific out-of-the-box hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: 38b88246ccc552bffaaf54259d064beeee434539 # frozen: v4.0.1
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
     hooks:
       - id: check-case-conflict
       - id: check-shebang-scripts-are-executable
@@ -128,7 +132,7 @@ repos:
   # ----------------------------------------------
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: 38b88246ccc552bffaaf54259d064beeee434539 # frozen: v4.0.1
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
     hooks:
       - id: check-json
       - id: check-toml
@@ -136,7 +140,7 @@ repos:
 
   # yamllint - yaml linter
   - repo: https://github.com/adrienverge/yamllint
-    rev: 85ccd625a382423edd988fcb796c4dd5897886fb # frozen: v1.26.1
+    rev: cba56bcde1fdd01c1deb3f945e69764c291a6530 # frozen: v1.38.0
     hooks:
       # Config file: .yamllint (yaml) [--config-file]
       # Inline skip: `# yamllint disable-line[ rule:<RULE>]`

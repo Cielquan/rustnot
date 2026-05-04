@@ -1,24 +1,25 @@
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+use iced;
 
-#[macro_use]
-extern crate lazy_static;
 #[macro_use]
 extern crate serde_derive;
 
 mod app;
-mod config;
-mod notification;
-mod style;
-mod timer;
-
-use iced::{window, Application, Settings};
+mod components;
+mod settings;
+mod settings_file;
+mod styles;
 
 pub fn main() -> iced::Result {
-    app::App::run(Settings {
-        window: window::Settings {
-            size: (800, 600),
-            ..window::Settings::default()
-        },
-        ..Settings::default()
-    })
+    iced::application(app::App::new, app::App::update, app::App::view)
+        .subscription(app::App::subscription)
+        .theme(app::App::theme)
+        .title("RustNot")
+        .window(iced::window::settings::Settings {
+            size: iced::Size {
+                width: 400.0,
+                height: 400.0,
+            },
+            ..Default::default()
+        })
+        .run()
 }

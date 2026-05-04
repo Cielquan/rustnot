@@ -1,534 +1,549 @@
-use std::borrow::BorrowMut;
+use crate::components::{button_with_icon, default_tooltip, icon_button, modal};
+use crate::settings::{Settings, Stance};
+use crate::settings_file::{SETTINGS_FILE_NAME, SettingsFileError};
+use crate::styles;
 
-use iced::{
-    alignment, button, text_input, Alignment, Application, Button, Column, Command, Container,
-    Element, Length, Radio, Row, Rule, Subscription, Text, TextInput,
-};
+use iced::Element;
+use iced::keyboard::{self, key};
+use iced::time::{self, Duration, Instant, milliseconds};
+use iced::widget::{button, column, container, operation, radio, row, rule, space, text};
+use iced_aw;
+use notify_rust::{Notification, Timeout};
 
-use crate::config::{self, Stance};
-use crate::timer::CycleResult;
-use crate::{style, timer};
-
-static ZERO_DURATION: std::time::Duration = std::time::Duration::from_secs(0);
-static ONE_MINUTE: std::time::Duration = std::time::Duration::from_secs(60);
-
+#[derive(Debug, Default)]
 pub struct App {
-    config: config::Config,
-    theme: style::Theme,
-    state: State,
+    theme: Option<iced::Theme>,
+    settings_modal_show: bool,
+    settings_modal_fields: Settings,
+    settings: Settings,
+    current_timer_cycle: Option<TimerCycleInfo>,
 }
 
-impl Default for App {
-    fn default() -> Self {
-        Self {
-            config: config::Config::default(),
-            theme: style::Theme::default(),
-            state: State::default(),
-        }
-    }
-}
-
-struct State {
-    sit_time: text_input::State,
-    stand_time: text_input::State,
-    toast_duration: text_input::State,
-    save_button: button::State,
-    config_saved: bool,
-    timer_button: button::State,
-    timer_state: timer::TimerStage,
-    current_stance: Stance,
-    stance_switch_button: button::State,
-    timer_config_cache: config::Config,
-    timer_cycle_start_timestamp: std::time::Instant,
-    timer_cycle_remaining_time: std::time::Duration,
-}
-
-impl Default for State {
-    fn default() -> Self {
-        Self {
-            sit_time: text_input::State::default(),
-            stand_time: text_input::State::default(),
-            toast_duration: text_input::State::default(),
-            save_button: button::State::default(),
-            config_saved: false,
-            timer_button: button::State::default(),
-            timer_state: timer::TimerStage::Idle,
-            current_stance: Stance::default(),
-            stance_switch_button: button::State::default(),
-            timer_config_cache: config::Config::default(),
-            timer_cycle_start_timestamp: std::time::Instant::now(),
-            timer_cycle_remaining_time: ZERO_DURATION,
-        }
-    }
+#[derive(Debug, Clone, Copy)]
+struct TimerCycleInfo {
+    start_time: Instant,
+    duration: Duration,
+    stace: Stance,
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    ConfigFileLoaded(Result<config::Config, config::ConfigFileError>),
-    SaveConfigToFile,
-    ConfigSavedToFile(Result<(), config::ConfigFileError>),
-    ConfigValueSitTimeChanged(String),
-    ConfigValueStandTimeChanged(String),
-    ConfigValueStanceChanged(Stance),
-    ConfigValueToastTimeChanged(String),
-    StartTimer,
-    StopTimer,
-    StartTimerCycle(bool),
-    TimerCycleFinished(timer::CycleResult),
-    SwitchStance,
-    TimerClockTick(std::time::Instant),
+    KeyBoardEvent(keyboard::Event),
+    TimerStart,
+    TimerStop,
+    TimerTick,
+    ManualTimerCycleEnd,
+    ThemeChanged(Option<iced::Theme>),
+    SettingsModalShow,
+    SettingsModalHide,
+    SettingsConfirmAndModalHide,
+    SettingsResetToDefault,
+    SettingSitTimeChanged(u64),
+    SettingStandTimeChanged(u64),
+    SettingStartStanceChanged(Stance),
+    SettingsSaveToFile,
+    SettingsLoadFromFile,
 }
 
-impl<'a> Application for App {
-    type Executor = iced::executor::Default;
-    type Message = Message;
-    type Flags = ();
+impl App {
+    pub fn new() -> Self {
+        let loaded_settings = match Settings::load_from_file() {
+            Err(SettingsFileError::MissingFile) => Settings::default(),
+            Err(err) => {
+                Notification::new()
+                    .summary("Failed loading settings")
+                    .body(&format!(
+                        "An error occured while loading the settings from file: {}",
+                        err
+                    ))
+                    .sound_name("dialog-error")
+                    .timeout(Timeout::Milliseconds(10 * 1000))
+                    .show()
+                    .expect("unable to toast");
+                Settings::default()
+            }
+            Ok(s) => {
+                Notification::new()
+                    .summary("Settings loaded")
+                    .body("Successfully loaded settings from file.")
+                    .sound_name("dialog-information")
+                    .timeout(Timeout::Milliseconds(10 * 1000))
+                    .show()
+                    .expect("unable to toast");
+                s
+            }
+        };
 
-    fn new(_flags: ()) -> (Self, Command<Message>) {
-        (
-            Self::default(),
-            Command::perform(config::Config::load_from_file(), Message::ConfigFileLoaded),
-        )
+        Self {
+            theme: None,
+            settings_modal_show: false,
+            settings: loaded_settings,
+            settings_modal_fields: loaded_settings,
+            current_timer_cycle: None,
+        }
     }
 
-    fn title(&self) -> String {
-        String::from("rustnot")
-    }
-
-    fn update(&mut self, message: Message) -> Command<Message> {
+    pub fn update(&mut self, message: Message) -> iced::Task<Message> {
         match message {
-            Message::ConfigFileLoaded(res) => {
-                if let Ok(new_conf) = res {
-                    self.config = new_conf.clone();
-                    self.state.current_stance = new_conf.start_stance;
-                    self.state.config_saved = true;
+            Message::KeyBoardEvent(keyboard_event) => match keyboard_event {
+                keyboard::Event::KeyPressed {
+                    key: keyboard::Key::Named(key::Named::Escape),
+                    ..
+                } => {
+                    if self.settings_modal_show {
+                        self.hide_modal();
+                    }
+                    iced::Task::none()
                 }
+                _ => iced::Task::none(),
+            },
+            Message::TimerStart => {
+                self.start_new_cycle();
+                iced::Task::none()
             }
-            Message::SaveConfigToFile => {
-                return Command::perform(
-                    config::Config::save_to_file(self.config.clone()),
-                    Message::ConfigSavedToFile,
-                );
+            Message::TimerStop => {
+                self.current_timer_cycle = None;
+                iced::Task::none()
             }
-            Message::ConfigSavedToFile(res) => {
-                if res.is_ok() {
-                    self.state.config_saved = true;
+            Message::TimerTick => {
+                if let Some(cycle_info) = &self.current_timer_cycle {
+                    let run_duration = Instant::now() - cycle_info.start_time;
+                    if run_duration >= cycle_info.duration {
+                        self.start_new_cycle();
+                    };
+                };
+                iced::Task::none()
+            }
+            Message::ManualTimerCycleEnd => {
+                self.start_new_cycle();
+                iced::Task::none()
+            }
+            Message::ThemeChanged(new_theme) => {
+                self.theme = new_theme;
+                iced::Task::none()
+            }
+            Message::SettingsModalShow => {
+                self.settings_modal_show = true;
+                self.reset_modal_fields();
+                operation::focus_next()
+            }
+            Message::SettingsModalHide => {
+                self.hide_modal();
+                iced::Task::none()
+            }
+            Message::SettingSitTimeChanged(new_sit_time) => {
+                self.settings_modal_fields.sit_duration_as_min = new_sit_time;
+                iced::Task::none()
+            }
+            Message::SettingStandTimeChanged(new_stand_time) => {
+                self.settings_modal_fields.stand_duration_as_min = new_stand_time;
+                iced::Task::none()
+            }
+            Message::SettingStartStanceChanged(new_start_stance) => {
+                self.settings_modal_fields.start_stance = new_start_stance;
+                iced::Task::none()
+            }
+            Message::SettingsConfirmAndModalHide => {
+                self.settings.sit_duration_as_min = self.settings_modal_fields.sit_duration_as_min;
+                self.settings.stand_duration_as_min =
+                    self.settings_modal_fields.stand_duration_as_min;
+                self.settings.start_stance = self.settings_modal_fields.start_stance;
+                self.hide_modal();
+                iced::Task::none()
+            }
+            Message::SettingsResetToDefault => {
+                self.settings_modal_fields = Settings::default();
+                iced::Task::none()
+            }
+            Message::SettingsSaveToFile => {
+                match self.settings_modal_fields.save_to_file() {
+                    Err(err) => {
+                        Notification::new()
+                            .summary("Failed saving settings")
+                            .body(&format!(
+                                "An error occured while saving the settings to file: {}",
+                                err
+                            ))
+                            .sound_name("dialog-error")
+                            .timeout(Timeout::Milliseconds(10 * 1000))
+                            .show()
+                            .expect("unable to toast");
+                        return iced::Task::none();
+                    }
+                    Ok(_) => return iced::Task::none(),
+                };
+            }
+            Message::SettingsLoadFromFile => {
+                self.settings_modal_fields = match Settings::load_from_file() {
+                    Err(err) => {
+                        Notification::new()
+                            .summary("Failed loading settings")
+                            .body(&format!(
+                                "An error occured while loading the settings from file: {}",
+                                err
+                            ))
+                            .sound_name("dialog-error")
+                            .timeout(Timeout::Milliseconds(10 * 1000))
+                            .show()
+                            .expect("unable to toast");
+                        return iced::Task::none();
+                    }
+                    Ok(s) => s,
+                };
+                iced::Task::none()
+            }
+        }
+    }
+
+    pub fn subscription(&self) -> iced::Subscription<Message> {
+        let tick = match self.current_timer_cycle {
+            None => iced::Subscription::none(),
+            Some(_) => time::every(milliseconds(100)).map(|_| Message::TimerTick),
+        };
+
+        iced::Subscription::batch(vec![tick, keyboard::listen().map(Message::KeyBoardEvent)])
+    }
+
+    pub fn view(&self) -> iced::Element<'_, Message> {
+        let main_heading = text("RustNot")
+            .width(iced::Length::Fill)
+            .align_x(iced::Alignment::Start)
+            .size(styles::TEXT_SIZE_HEADING);
+
+        let theme_toggle_btn = match self.theme {
+            Some(iced::Theme::Dark) => icon_button(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/resources/images/sun.svg"
+            ))
+            .on_press(Message::ThemeChanged(Some(iced::Theme::Light))),
+
+            Some(iced::Theme::Light) => icon_button(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/resources/images/sun-moon.svg"
+            ))
+            .on_press(Message::ThemeChanged(None)),
+
+            None | _ => icon_button(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/resources/images/moon.svg"
+            ))
+            .on_press(Message::ThemeChanged(Some(iced::Theme::Dark))),
+        };
+
+        let settings_btn = icon_button(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/resources/images/settings.svg"
+        ))
+        .on_press(Message::SettingsModalShow);
+
+        let sit_duration = row![
+            text("Sit time [min]:")
+                .width(iced::Length::Fill)
+                .align_x(iced::Alignment::Start)
+                .size(styles::TEXT_SIZE_NORMAL),
+            text!("{}", &self.settings.sit_duration_as_min)
+                .align_x(iced::Alignment::End)
+                .size(styles::TEXT_SIZE_NORMAL),
+        ];
+
+        let stand_duration = row![
+            text("Stand time [min]:")
+                .width(iced::Length::Fill)
+                .align_x(iced::Alignment::Start)
+                .size(styles::TEXT_SIZE_NORMAL),
+            text!("{}", &self.settings.stand_duration_as_min)
+                .align_x(iced::Alignment::End)
+                .size(styles::TEXT_SIZE_NORMAL),
+        ];
+
+        let current_stance_info = row![
+            text("Current stance:")
+                .width(iced::Length::Fill)
+                .align_x(iced::Alignment::Start)
+                .size(styles::TEXT_SIZE_NORMAL),
+            text(
+                match if let Some(current_cycle) = &self.current_timer_cycle {
+                    &current_cycle.stace
                 } else {
-                    self.state.config_saved = false;
-                }
-            }
-            Message::ConfigValueSitTimeChanged(input) => {
-                if let Ok(dur) = input.parse::<u32>() {
-                    self.config.sit_time = dur;
-                    self.state.config_saved = false;
-                }
-            }
-            Message::ConfigValueStandTimeChanged(input) => {
-                if let Ok(dur) = input.parse::<u32>() {
-                    self.config.stand_time = dur;
-                    self.state.config_saved = false;
-                }
-            }
-            Message::ConfigValueStanceChanged(new_stance) => {
-                self.config.start_stance = new_stance;
-                if self.state.timer_state == timer::TimerStage::Idle {
-                    self.state.current_stance = new_stance;
-                }
-                self.state.config_saved = false;
-            }
-            Message::ConfigValueToastTimeChanged(input) => {
-                if let Ok(dur) = input.parse::<u32>() {
-                    self.config.toast_duration = dur;
-                    self.state.config_saved = false;
-                }
-            }
-            Message::StartTimer => {
-                self.state.timer_state = timer::TimerStage::Running;
-                *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Run;
-                self.state.timer_config_cache = self.config.clone();
-                self.state.current_stance = self.state.timer_config_cache.start_stance;
-                return Command::perform(async { true }, Message::StartTimerCycle);
-            }
-            Message::StartTimerCycle(is_init) => {
-                self.state.timer_cycle_start_timestamp = std::time::Instant::now();
-                return Command::perform(
-                    timer::run_cycle_timer(
-                        self.state.current_stance,
-                        if self.state.current_stance == Stance::Sitting {
-                            self.state.timer_config_cache.sit_time
-                        } else {
-                            self.state.timer_config_cache.stand_time
-                        },
-                        is_init,
-                        self.state.timer_config_cache.toast_duration,
-                    ),
-                    Message::TimerCycleFinished,
-                );
-            }
-            Message::TimerCycleFinished(res) => {
-                self.state.timer_cycle_remaining_time = ZERO_DURATION;
-                match res {
-                    CycleResult::OK | CycleResult::Skipped => {
-                        if res == CycleResult::Skipped {
-                            *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Run;
-                        }
-                        match self.state.current_stance {
-                            Stance::Sitting => self.state.current_stance = Stance::Standing,
-                            Stance::Standing => self.state.current_stance = Stance::Sitting,
-                        };
-                        return Command::perform(async { false }, Message::StartTimerCycle);
-                    }
-                    CycleResult::Aborted => {
-                        self.state.timer_state = timer::TimerStage::Idle;
-                        self.state.current_stance = self.config.start_stance;
-                    }
-                }
-            }
-            Message::StopTimer => {
-                *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Abort;
-            }
-            Message::SwitchStance => {
-                if self.state.timer_state == timer::TimerStage::Running {
-                    *timer::TIMER_SIGNAL.lock() = timer::TimerSignal::Skip;
-                }
-            }
-            Message::TimerClockTick(now) => {
-                if self.state.timer_state == timer::TimerStage::Idle {
-                    self.state.timer_cycle_remaining_time = ZERO_DURATION;
-                    return Command::none();
-                }
-                let cycle_duration = match self.state.current_stance {
-                    Stance::Standing => std::time::Duration::from_secs(
-                        self.state.timer_config_cache.stand_time as u64 * 60,
-                    ),
-                    Stance::Sitting => std::time::Duration::from_secs(
-                        self.state.timer_config_cache.sit_time as u64 * 60,
-                    ),
-                };
-                self.state.timer_cycle_remaining_time = {
-                    let elapsed_time = now - self.state.timer_cycle_start_timestamp;
-                    if elapsed_time > cycle_duration {
-                        ONE_MINUTE
+                    &self.settings.start_stance
+                } {
+                    Stance::Sitting => "Sitting",
+                    Stance::Standing => "Standing",
+                },
+            )
+            .align_x(iced::Alignment::End)
+            .size(styles::TEXT_SIZE_NORMAL)
+        ];
+
+        let next_stance_switch_info = row![
+            text("Next cycle in:")
+                .width(iced::Length::Fill)
+                .align_x(iced::Alignment::Start)
+                .size(styles::TEXT_SIZE_NORMAL),
+            text(match &self.current_timer_cycle {
+                Some(cycle_info) => {
+                    const MINUTE: u64 = 60;
+                    const HOUR: u64 = 60 * MINUTE;
+
+                    let run_duration = Instant::now() - cycle_info.start_time;
+                    let displayed_duration_as_sec = if run_duration < cycle_info.duration {
+                        (cycle_info.duration - run_duration).as_secs()
                     } else {
-                        cycle_duration - elapsed_time + ONE_MINUTE
-                    }
-                };
-            }
+                        0
+                    };
+                    format!(
+                        "{:0>2}:{:0>2}:{:0>2}",
+                        displayed_duration_as_sec / HOUR,
+                        (displayed_duration_as_sec % HOUR) / MINUTE,
+                        displayed_duration_as_sec % MINUTE,
+                    )
+                }
+                None => "-".to_string(),
+            })
+            .align_x(iced::Alignment::End)
+            .size(styles::TEXT_SIZE_NORMAL)
+        ];
+
+        let info_texts = column![
+            sit_duration,
+            stand_duration,
+            current_stance_info,
+            next_stance_switch_info,
+        ]
+        .spacing(styles::COL_SPACING);
+
+        let timer_control_btn = (match &self.current_timer_cycle {
+            None => button_with_icon(
+                "Start timer",
+                concat!(env!("CARGO_MANIFEST_DIR"), "/resources/images/play.svg"),
+            )
+            .on_press(Message::TimerStart),
+            Some(_) => button_with_icon(
+                "Stop timer",
+                concat!(env!("CARGO_MANIFEST_DIR"), "/resources/images/pause.svg"),
+            )
+            .style(button::danger)
+            .on_press(Message::TimerStop),
+        })
+        .width(128);
+
+        let stance_switch_btn = button_with_icon(
+            "Skip cycle",
+            concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/resources/images/fast-forward.svg"
+            ),
+        )
+        .on_press_maybe(if self.current_timer_cycle.is_some() {
+            Some(Message::ManualTimerCycleEnd)
+        } else {
+            None
+        });
+
+        let main_content: Element<'_, Message> = column![
+            row![
+                main_heading,
+                space::horizontal(),
+                theme_toggle_btn,
+                settings_btn
+            ]
+            .spacing(styles::ROW_SPACING)
+            .align_y(iced::Alignment::Start),
+            rule::horizontal(styles::HORIZONTAL_RULE_HEIGHT),
+            info_texts,
+            rule::horizontal(styles::HORIZONTAL_RULE_HEIGHT),
+            row![timer_control_btn, space::horizontal(), stance_switch_btn]
+                .width(iced::Length::Fill)
+                .padding(styles::ROW_PADDING)
+                .spacing(styles::ROW_SPACING)
+                .align_y(iced::Alignment::Center),
+        ]
+        .padding(styles::OUTER_PADDING)
+        .spacing(styles::MAIN_COLUMN_SPACING)
+        .align_x(iced::Alignment::Center)
+        .height(400)
+        .into();
+
+        if self.settings_modal_show {
+            let modal_content: Element<'_, Message> = container(
+                column![
+                    text("Settings").size(styles::TEXT_SIZE_HEADING),
+                    rule::horizontal(styles::HORIZONTAL_RULE_HEIGHT),
+                    column![
+                        row![
+                            text("Sit time [min]:").size(styles::TEXT_SIZE_NORMAL),
+                            space::horizontal(),
+                            iced_aw::number_input(
+                                &self.settings_modal_fields.sit_duration_as_min,
+                                0..=1440,
+                                Message::SettingSitTimeChanged
+                            )
+                            .width(75)
+                            .step(1)
+                            .on_input(Message::SettingSitTimeChanged)
+                            .on_submit(Message::SettingsConfirmAndModalHide),
+                        ]
+                        .align_y(iced::Alignment::Center),
+                        row![
+                            text("Stand time [min]:").size(styles::TEXT_SIZE_NORMAL),
+                            space::horizontal(),
+                            iced_aw::number_input(
+                                &self.settings_modal_fields.stand_duration_as_min,
+                                0..=1440,
+                                Message::SettingStandTimeChanged
+                            )
+                            .width(75)
+                            .step(1)
+                            .on_input(Message::SettingStandTimeChanged)
+                            .on_submit(Message::SettingsConfirmAndModalHide),
+                        ]
+                        .align_y(iced::Alignment::Center),
+                        column![
+                            text("Start stance:").size(styles::TEXT_SIZE_NORMAL),
+                            row![
+                                radio(
+                                    "Sitting",
+                                    Stance::Sitting,
+                                    Some(self.settings_modal_fields.start_stance),
+                                    Message::SettingStartStanceChanged
+                                )
+                                .size(styles::TEXT_SIZE_NORMAL),
+                                space::horizontal(),
+                                radio(
+                                    "Standing",
+                                    Stance::Standing,
+                                    Some(self.settings_modal_fields.start_stance),
+                                    Message::SettingStartStanceChanged
+                                )
+                                .size(styles::TEXT_SIZE_NORMAL),
+                            ],
+                        ]
+                        .spacing(styles::COL_SPACING),
+                    ]
+                    .spacing(styles::COL_SPACING),
+                    rule::horizontal(styles::HORIZONTAL_RULE_HEIGHT),
+                    row![
+                        default_tooltip(
+                            icon_button(concat!(
+                                env!("CARGO_MANIFEST_DIR"),
+                                "/resources/images/circle-check.svg"
+                            ),)
+                            .style(button::success)
+                            .on_press(Message::SettingsConfirmAndModalHide),
+                            "Confirm"
+                        ),
+                        space::horizontal(),
+                        default_tooltip(
+                            icon_button(concat!(
+                                env!("CARGO_MANIFEST_DIR"),
+                                "/resources/images/circle-x.svg"
+                            ),)
+                            .style(button::danger)
+                            .on_press(Message::SettingsModalHide),
+                            "Cancel"
+                        ),
+                        space::horizontal(),
+                        default_tooltip(
+                            icon_button(concat!(
+                                env!("CARGO_MANIFEST_DIR"),
+                                "/resources/images/rotate-ccw.svg"
+                            ),)
+                            .style(button::secondary)
+                            .on_press(Message::SettingsResetToDefault),
+                            "Reset to defaults"
+                        ),
+                        space::horizontal(),
+                        default_tooltip(
+                            icon_button(concat!(
+                                env!("CARGO_MANIFEST_DIR"),
+                                "/resources/images/hard-drive-download.svg"
+                            ),)
+                            .style(button::primary)
+                            .on_press(Message::SettingsSaveToFile),
+                            constcat::concat!("Save to file: ", SETTINGS_FILE_NAME),
+                        ),
+                        space::horizontal(),
+                        default_tooltip(
+                            icon_button(concat!(
+                                env!("CARGO_MANIFEST_DIR"),
+                                "/resources/images/hard-drive-upload.svg"
+                            ),)
+                            .style(button::primary)
+                            .on_press(Message::SettingsLoadFromFile),
+                            constcat::concat!("Load from file: ", SETTINGS_FILE_NAME),
+                        ),
+                    ]
+                    .width(iced::Length::Fill)
+                    .padding([0, styles::ROW_PADDING])
+                    .spacing(styles::ROW_SPACING)
+                    .align_y(iced::Alignment::Center)
+                ]
+                .spacing(styles::MAIN_COLUMN_SPACING),
+            )
+            .width(350)
+            .padding(styles::OUTER_PADDING)
+            .style(container::rounded_box)
+            .into();
+
+            modal(main_content, modal_content, Message::SettingsModalHide)
+        } else {
+            main_content
         }
-        Command::none()
     }
 
-    fn subscription(&self) -> Subscription<Message> {
-        match self.state.timer_state {
-            timer::TimerStage::Idle => Subscription::none(),
-            timer::TimerStage::Running => {
-                iced::time::every(std::time::Duration::from_millis(10)).map(Message::TimerClockTick)
+    pub fn theme(&self) -> Option<iced::Theme> {
+        self.theme.clone()
+    }
+}
+
+impl App {
+    fn start_new_cycle(&mut self) {
+        match self.current_timer_cycle {
+            None => {
+                self.current_timer_cycle = Some(TimerCycleInfo {
+                    start_time: Instant::now(),
+                    duration: Duration::from_mins(
+                        self.settings
+                            .get_duration_for_stance(&self.settings.start_stance),
+                    ),
+                    stace: self.settings.start_stance,
+                });
+            }
+            Some(cycle_info) => {
+                let new_cycle_stance = Stance::inverted(cycle_info.stace);
+                let new_cycle_duration =
+                    Duration::from_mins(self.settings.get_duration_for_stance(&new_cycle_stance));
+                self.current_timer_cycle = Some(TimerCycleInfo {
+                    start_time: Instant::now(),
+                    duration: new_cycle_duration,
+                    stace: new_cycle_stance,
+                });
+
+                Notification::new()
+                    .summary(match new_cycle_stance {
+                        Stance::Sitting => "Please sit Down.",
+                        Stance::Standing => "Please stand up.",
+                    })
+                    .body(&format!(
+                        "It's time to change your stance.\nNext reminder in: {} min.",
+                        new_cycle_duration.as_secs() / 60
+                    ))
+                    .sound_name("dialog-information")
+                    .timeout(Timeout::Milliseconds(10 * 1000))
+                    .show()
+                    .expect("unable to toast");
             }
         }
     }
 
-    fn view(&mut self) -> Element<Message> {
-        const MAIN_COLUMNS_WIDTH: u16 = 400;
-        const MAIN_COLUMNS_PADDING: u16 = 20;
-        const MAIN_COLUMNS_SPACING: u16 = 10;
+    fn reset_modal_fields(&mut self) {
+        self.settings_modal_fields.sit_duration_as_min = self.settings.sit_duration_as_min;
+        self.settings_modal_fields.stand_duration_as_min = self.settings.stand_duration_as_min;
+        self.settings_modal_fields.start_stance = self.settings.start_stance;
+    }
 
-        /// Space left and right of rule
-        const VERTICAL_RULE_PADDING: u16 = 0;
-        /// Space above and below of rule
-        const HORIZONTAL_RULE_PADDING: u16 = 10;
-
-        const BUTTON_PADDING: u16 = 10;
-
-        const ROW_PADDING: u16 = 15;
-        const ROW_SPACING: u16 = 10;
-        const COL_PADDING: u16 = 15;
-        const COL_SPACING: u16 = 10;
-
-        const TEXTBOX_WIDTH: u16 = 50;
-
-        const TEXT_SIZE_HEADING: u16 = 45;
-        const TEXT_SIZE_NORMAL: u16 = 30;
-        const TEXT_SIZE_SMALL: u16 = 15;
-
-        let config_heading = Text::new("Config")
-            .width(Length::Fill)
-            .horizontal_alignment(alignment::Horizontal::Center)
-            .size(TEXT_SIZE_HEADING);
-
-        let sit_time = Row::new()
-            .width(Length::Fill)
-            .align_items(Alignment::Fill)
-            .push(
-                Text::new("Sit time [min]:")
-                    .width(Length::Fill)
-                    .horizontal_alignment(alignment::Horizontal::Left)
-                    .size(TEXT_SIZE_NORMAL),
-            )
-            .push(
-                TextInput::new(
-                    self.state.sit_time.borrow_mut(),
-                    "...",
-                    &self.config.sit_time.to_string()[..],
-                    Message::ConfigValueSitTimeChanged,
-                )
-                .width(Length::Units(TEXTBOX_WIDTH))
-                .size(TEXT_SIZE_NORMAL)
-                .style(self.theme),
-            );
-
-        let stand_time = Row::new()
-            .width(Length::Fill)
-            .align_items(Alignment::Fill)
-            .push(
-                Text::new("Stand time [min]:")
-                    .width(Length::Fill)
-                    .horizontal_alignment(alignment::Horizontal::Left)
-                    .size(TEXT_SIZE_NORMAL),
-            )
-            .push(
-                TextInput::new(
-                    self.state.stand_time.borrow_mut(),
-                    "...",
-                    &self.config.stand_time.to_string()[..],
-                    Message::ConfigValueStandTimeChanged,
-                )
-                .width(Length::Units(TEXTBOX_WIDTH))
-                .size(TEXT_SIZE_NORMAL)
-                .style(self.theme),
-            );
-
-        let set_times = Column::new()
-            .padding(COL_PADDING)
-            .spacing(COL_SPACING)
-            .width(Length::Fill)
-            .push(sit_time)
-            .push(stand_time);
-
-        let stance_switch = Column::new()
-            .padding(COL_PADDING)
-            .spacing(COL_SPACING)
-            .push(
-                Text::new("Choose a starting stance:")
-                    .width(Length::Fill)
-                    .horizontal_alignment(alignment::Horizontal::Left)
-                    .size(TEXT_SIZE_NORMAL),
-            )
-            .push(
-                Radio::new(
-                    Stance::Sitting,
-                    format!("{:?}", Stance::Sitting),
-                    Some(self.config.start_stance),
-                    Message::ConfigValueStanceChanged,
-                )
-                .style(self.theme),
-            )
-            .push(
-                Radio::new(
-                    Stance::Standing,
-                    format!("{:?}", Stance::Standing),
-                    Some(self.config.start_stance),
-                    Message::ConfigValueStanceChanged,
-                )
-                .style(self.theme),
-            );
-
-        let toast_duration = Row::new()
-            .padding(ROW_PADDING)
-            .width(Length::Fill)
-            .align_items(Alignment::Fill)
-            .push(
-                Text::new("Notification time [sec]:")
-                    .width(Length::Fill)
-                    .size(TEXT_SIZE_NORMAL),
-            )
-            .push(
-                TextInput::new(
-                    self.state.toast_duration.borrow_mut(),
-                    "...",
-                    &self.config.toast_duration.to_string()[..],
-                    Message::ConfigValueToastTimeChanged,
-                )
-                .width(Length::Units(TEXTBOX_WIDTH))
-                .size(TEXT_SIZE_NORMAL)
-                .style(self.theme),
-            );
-
-        let save_state_text;
-        if self.state.config_saved {
-            save_state_text = "Config saved";
-        } else {
-            save_state_text = "Unsaved config";
-        }
-
-        let save_btn = Column::new()
-            .padding(COL_PADDING)
-            .align_items(Alignment::Center)
-            .push(
-                Button::new(
-                    &mut self.state.save_button,
-                    Text::new("Save config to file"),
-                )
-                .padding(BUTTON_PADDING)
-                .style(style::Button::Normal)
-                .on_press(Message::SaveConfigToFile),
-            )
-            .push(Text::new(save_state_text).size(TEXT_SIZE_SMALL));
-
-        let config_column = Column::new()
-            .padding(MAIN_COLUMNS_PADDING)
-            .spacing(MAIN_COLUMNS_SPACING)
-            .width(Length::Units(MAIN_COLUMNS_WIDTH))
-            .align_items(Alignment::Center)
-            .push(config_heading)
-            .push(Rule::horizontal(HORIZONTAL_RULE_PADDING).style(self.theme))
-            .push(set_times)
-            .push(Rule::horizontal(HORIZONTAL_RULE_PADDING).style(self.theme))
-            .push(stance_switch)
-            .push(Rule::horizontal(HORIZONTAL_RULE_PADDING).style(self.theme))
-            .push(toast_duration)
-            .push(Rule::horizontal(HORIZONTAL_RULE_PADDING).style(self.theme))
-            .push(save_btn);
-
-        let timer_heading = Text::new("Timer")
-            .width(Length::Fill)
-            .horizontal_alignment(alignment::Horizontal::Center)
-            .size(TEXT_SIZE_HEADING);
-
-        let timer_state_text_content;
-        if self.state.timer_state == timer::TimerStage::Running {
-            timer_state_text_content = "Running ...";
-        } else {
-            timer_state_text_content = "Stopped";
-        }
-
-        let timer_state_text = Row::new()
-            .width(Length::Fill)
-            .align_items(Alignment::Center)
-            .push(
-                Text::new("Timer:")
-                    .width(Length::Fill)
-                    .horizontal_alignment(alignment::Horizontal::Left)
-                    .size(TEXT_SIZE_NORMAL),
-            )
-            .push(
-                Text::new(timer_state_text_content)
-                    .horizontal_alignment(alignment::Horizontal::Right)
-                    .size(TEXT_SIZE_NORMAL),
-            );
-
-        let stance_text = Row::new()
-            .width(Length::Fill)
-            .align_items(Alignment::Center)
-            .push(
-                Text::new("Current stance:")
-                    .width(Length::Fill)
-                    .horizontal_alignment(alignment::Horizontal::Left)
-                    .size(TEXT_SIZE_NORMAL),
-            )
-            .push(
-                Text::new(format!("{}", self.state.current_stance))
-                    .horizontal_alignment(alignment::Horizontal::Right)
-                    .size(TEXT_SIZE_NORMAL),
-            );
-
-        let timer_time_text = Row::new()
-            .width(Length::Fill)
-            .align_items(Alignment::Center)
-            .push(
-                Text::new("Next switch in [min]:")
-                    .width(Length::Fill)
-                    .horizontal_alignment(alignment::Horizontal::Left)
-                    .size(TEXT_SIZE_NORMAL),
-            )
-            .push(
-                Text::new(format!(
-                    "{:0}",
-                    self.state.timer_cycle_remaining_time.as_secs() / 60
-                ))
-                .horizontal_alignment(alignment::Horizontal::Right)
-                .size(TEXT_SIZE_NORMAL),
-            );
-
-        let info_texts = Column::new()
-            .padding(COL_PADDING)
-            .spacing(COL_SPACING)
-            .width(Length::Fill)
-            .push(timer_state_text)
-            .push(stance_text)
-            .push(timer_time_text);
-
-        let timer_controll_btn_text;
-        let timer_controll_btn_on_press;
-        let timer_controll_btn_style: style::Button;
-        if self.state.timer_state == timer::TimerStage::Running {
-            timer_controll_btn_text = "Stop Timer";
-            timer_controll_btn_on_press = Message::StopTimer;
-            timer_controll_btn_style = style::Button::Destructive;
-        } else {
-            timer_controll_btn_text = "Start Timer";
-            timer_controll_btn_on_press = Message::StartTimer;
-            timer_controll_btn_style = style::Button::Normal;
-        }
-
-        let timer_controll_btn = Column::new()
-            .padding(COL_PADDING)
-            .align_items(Alignment::Center)
-            .push(
-                Button::new(
-                    &mut self.state.timer_button,
-                    Text::new(timer_controll_btn_text),
-                )
-                .padding(BUTTON_PADDING)
-                .width(Length::Units(105))
-                .style(timer_controll_btn_style)
-                .on_press(timer_controll_btn_on_press),
-            );
-
-        let stance_switch_btn = Column::new()
-            .padding(COL_PADDING)
-            .align_items(Alignment::Center)
-            .push(
-                Button::new(
-                    &mut self.state.stance_switch_button,
-                    Text::new("Switch stance now"),
-                )
-                .padding(BUTTON_PADDING)
-                .style(style::Button::Normal)
-                .on_press(Message::SwitchStance),
-            );
-
-        let timer_buttons = Row::new()
-            .padding(ROW_PADDING)
-            .spacing(ROW_SPACING)
-            .width(Length::Fill)
-            .push(timer_controll_btn)
-            .push(stance_switch_btn);
-
-        let timer_column = Column::new()
-            .padding(MAIN_COLUMNS_PADDING)
-            .spacing(MAIN_COLUMNS_SPACING)
-            .width(Length::Units(MAIN_COLUMNS_WIDTH))
-            .align_items(Alignment::Center)
-            .push(timer_heading)
-            .push(Rule::horizontal(HORIZONTAL_RULE_PADDING).style(self.theme))
-            .push(info_texts)
-            .push(Rule::horizontal(HORIZONTAL_RULE_PADDING).style(self.theme))
-            .push(timer_buttons);
-
-        let content = Row::new()
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .align_items(Alignment::Start)
-            .push(timer_column)
-            .push(Rule::vertical(VERTICAL_RULE_PADDING).style(self.theme))
-            .push(config_column);
-
-        Container::new(content)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .center_x()
-            .center_y()
-            .style(self.theme)
-            .into()
+    fn hide_modal(&mut self) {
+        self.settings_modal_show = false;
+        self.reset_modal_fields();
     }
 }
