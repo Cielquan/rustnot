@@ -7,7 +7,7 @@ edition = "2024"
 [dependencies]
 constcat = "0.6.1"
 iced = { version = "0.14.0", features = ["advanced", "svg", "smol"] }
-iced_aw = "0.13.1"
+iced_aw = "0.14.1"
 notify-rust = "4.15.0"
 serde = "1.0.228"
 serde_derive = "1.0.228"
